@@ -70,15 +70,57 @@ except:
         WRAP_AES256    = "http://www.w3.org/2001/04/xmlenc#kw-aes256"
 
 
+class WSRF_V1_2:
+    '''OASIS WSRF Specifications Version 1.2
+    '''
+    class LIFETIME:
+        XSD_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceLifetime-1.2-draft-01.xsd"
+        XSD_DRAFT4 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceLifetime-1.2-draft-04.xsd"
+
+        WSDL_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceLifetime-1.2-draft-01.wsdl"
+        WSDL_DRAFT4 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceLifetime-1.2-draft-04.wsdl"
+        #LATEST = DRAFT4
+        WSDL_LIST = (WSDL_DRAFT1, WSDL_DRAFT4)
+        XSD_LIST = (XSD_DRAFT1, XSD_DRAFT4)
+
+    class PROPERTIES:
+        XSD_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceProperties-1.2-draft-01.xsd"
+        XSD_DRAFT5 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceProperties-1.2-draft-05.xsd"
+
+        WSDL_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceProperties-1.2-draft-01.wsdl"
+        WSDL_DRAFT5 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceProperties-1.2-draft-05.wsdl"
+        #LATEST = DRAFT5
+        WSDL_LIST = (WSDL_DRAFT1, WSDL_DRAFT5)
+        XSD_LIST = (XSD_DRAFT1, XSD_DRAFT5)
+
+    class BASENOTIFICATION:
+        XSD_DRAFT1 = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.xsd"
+        #LATEST = DRAFT1
+        #WSDL_LIST = (WSDL_DRAFT1,)
+        XSD_LIST = (XSD_DRAFT1,)
+
+    class BASEFAULTS:
+        XSD_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-BaseFaults-1.2-draft-01.xsd"
+        XSD_DRAFT3 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-BaseFaults-1.2-draft-03.xsd"
+        #LATEST = DRAFT3
+        #WSDL_LIST = (WSDL_DRAFT1, WSDL_DRAFT3)
+        XSD_LIST = (XSD_DRAFT1, XSD_DRAFT3)
+
+WSRF = WSRF_V1_2
+WSRFLIST = (WSRF_V1_2,)
+
+
 class OASIS:
     '''URLs for Oasis specifications
     '''
     WSSE    = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
     UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-    LIFETIME = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceLifetime-1.2-draft-01.xsd"
-    PROPERTIES = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceProperties-1.2-draft-01.xsd"
-    BASENOTIFICATION = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.xsd"
-    BASEFAULTS = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-BaseFaults-1.2-draft-01.xsd"
+    LIFETIME = WSRF_V1_2.LIFETIME.XSD_DRAFT1
+    PROPERTIES = WSRF_V1_2.PROPERTIES.XSD_DRAFT1
+    BASENOTIFICATION = WSRF_V1_2.BASENOTIFICATION.XSD_DRAFT1
+    BASEFAULTS = WSRF_V1_2.BASEFAULTS.XSD_DRAFT1
+
+
 
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
@@ -99,7 +141,6 @@ class WSA200408:
     ADDRESS    = "http://schemas.xmlsoap.org/ws/2004/08/addressing"
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
     FAULT      = "%s/fault" %ADDRESS
-WSA = WSA200408
 
 class WSA200403:
     ADDRESS    = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
@@ -110,6 +151,9 @@ class WSA200303:
     ADDRESS    = "http://schemas.xmlsoap.org/ws/2003/03/addressing"
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
     FAULT      = None
+
+WSA = WSA200408
+WSA_LIST = (WSA200408, WSA200403, WSA200303)
 
 class WSP:
     POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"

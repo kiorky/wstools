@@ -11,7 +11,7 @@ ident = "$Id$"
 
 import weakref
 from cStringIO import StringIO
-from Namespaces import OASIS, XMLNS, WSA200408, WSA200403, WSA200303
+from Namespaces import OASIS, XMLNS, WSA, WSA_LIST, WSRF_V1_2
 from Utility import Collection, CollectionNS, DOM, ElementProxy, basejoin
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 
@@ -556,11 +556,12 @@ class PortType(Element):
         self.name = DOM.getAttr(element, 'name')
         self.documentation = GetDocumentation(element)
         self.targetNamespace = DOM.getAttr(element, 'targetNamespace')
-        if DOM.hasAttr(element, 'ResourceProperties', OASIS.PROPERTIES):
-            rpref = DOM.getAttr(element, 'ResourceProperties', OASIS.PROPERTIES)
-            self.resourceProperties = ParseQName(rpref, element)
 
-        lookfor = (WSA200408, WSA200403, WSA200303,)
+        for nsuri in WSRF_V1_2.PROPERTIES.XSD_LIST:
+            if DOM.hasAttr(element, 'ResourceProperties', nsuri):
+                rpref = DOM.getAttr(element, 'ResourceProperties', nsuri)
+                self.resourceProperties = ParseQName(rpref, element)
+
         NS_WSDL = DOM.GetWSDLUri(self.getWSDL().version)
         elements = DOM.getElements(element, 'operation', NS_WSDL)
         for element in elements:
@@ -577,7 +578,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in lookfor:
+                for WSA in WSA_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.setInput(message, name, docs, action)
@@ -588,7 +589,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in lookfor:
+                for WSA in WSA_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.setOutput(message, name, docs, action)
@@ -598,7 +599,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in lookfor:
+                for WSA in WSA_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.addFault(message, name, docs, action)
@@ -612,7 +613,7 @@ class PortType(Element):
         if self.resourceProperties:
             ns,name = self.resourceProperties
             prefix = epc.getPrefix(ns)
-            epc.setAttributeNS(OASIS.PROPERTIES, 'ResourceProperties', '%s:%s'%(prefix,name))
+            epc.setAttributeNS(WSRF.PROPERTIES.LATEST, 'ResourceProperties', '%s:%s'%(prefix,name))
 
         for op in self.operations:
             op.toDom(epc._getNode())
@@ -724,7 +725,7 @@ class MessageRole(Element):
         epc.setAttributeNS(None, 'message', self.message)
 
         if self.action:
-            epc.setAttributeNS(WSA200408.ADDRESS, 'Action', self.action)
+            epc.setAttributeNS(WSA.ADDRESS, 'Action', self.action)
         
 
 class Binding(Element):

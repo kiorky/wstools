@@ -591,6 +591,11 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         """return requested attribute or None
         """
         return self.attributes.get(attribute)
+
+    def getAttributeName(self):
+        """return attribute name or None
+        """
+        return self.getAttribute('name')
  
     def setAttributes(self, node):
         """Sets up attribute dictionary, checks for required attributes and 
