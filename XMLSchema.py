@@ -9,7 +9,7 @@
 
 ident = "$Id$"
 
-import types, weakref, urllib
+import types, weakref, urllib, sys
 from threading import RLock
 from xml.dom.ext import SplitQName
 from xml.ns import SCHEMA, XMLNS
@@ -2308,7 +2308,15 @@ class Redefine:
 
 ###########################
 ###########################
-class TypeDescriptionComponent(tuple):
+
+
+if sys.version_info[:2] >= (2, 2):
+    tupleClass = tuple
+else:
+    import UserTuple
+    tupleClass = UserTuple.UserTuple
+
+class TypeDescriptionComponent(tupleClass):
     """Tuple of length 2, consisting of
        a namespace and unprefixed name.
     """
