@@ -288,6 +288,7 @@ class ImportElement(Element):
 
 
 class Types(Collection):
+    default = lambda self,k: k.targetNamespace
     def __init__(self, parent):
         Collection.__init__(self, parent)
         self.documentation = ''
@@ -297,12 +298,6 @@ class Types(Collection):
         name = schema.targetNamespace
         self[name] = schema
         return schema
-
-    def keys(self):
-        return map(lambda i: i.targetNamespace, self.list)
-
-    def items(self):
-        return map(lambda i: i.targetNamespace, self.list)
 
     def addExtension(self, item):
         self.extensions.append(item)

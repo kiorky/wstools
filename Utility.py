@@ -557,7 +557,7 @@ DOM = DOM()
 
 class Collection(UserDict):
     """Helper class for maintaining ordered named collections."""
-    default = lambda k: k.name
+    default = lambda self,k: k.name
     def __init__(self, parent, key=None):
         UserDict.__init__(self)
         self.parent = weakref.ref(parent)

@@ -824,7 +824,8 @@ class XMLSchema(XMLSchemaComponent):
         XMLSchemaComponent.__init__(self, parent)
         f = lambda k: k.attributes['name']
         ns = lambda k: k.attributes['namespace']
-        self.includes = Collection(self, key=f)
+        sl = lambda k: k.attributes['schemaLocation']
+        self.includes = Collection(self, key=sl)
         self.imports = Collection(self, key=ns)
         self.elements = Collection(self, key=f)
         self.types = Collection(self, key=f)
