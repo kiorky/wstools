@@ -768,7 +768,7 @@ class XMLSchema(XMLSchemaComponent):
         """
         self.targetNamespace = None
         XMLSchemaComponent.__init__(self, parent)
-        f = lambda k: k.attributes['name']
+        f = lambda k: k.attributes[XMLSchemaComponent.xsd]['name']
         self.includes = Collection(self, key=f)
         self.imports = Collection(self, key=f)
         self.elements = Collection(self, key=f)
@@ -885,7 +885,7 @@ class XMLSchema(XMLSchemaComponent):
                 if component == 'include':
                     tp = self.__class__.Include(self)
                     tp.fromDom(node)
-                    self.includes[tp.attributes['schemaLocation']] = tp
+                    self.includes[tp.attributes[XMLSchemaComponent.xsd]['schemaLocation']] = tp
 
                     schema = tp.getSchema()
                     if schema.targetNamespace and \
@@ -901,11 +901,11 @@ class XMLSchema(XMLSchemaComponent):
                 elif component == 'import':
                     tp = self.__class__.Import(self)
                     tp.fromDom(node)
-                    if tp.attributes['namespace']:
-                        if tp.attributes['namespace'] == self.targetNamespace:
+                    if tp.attributes[XMLSchemaComponent.xsd]['namespace']:
+                        if tp.attributes[XMLSchemaComponent.xsd]['namespace'] == self.targetNamespace:
                             raise SchemaError,\
                                 'import and schema have same targetNamespace'
-                        self.imports[tp.attributes['namespace']] = tp
+                        self.imports[tp.attributes[XMLSchemaComponent.xsd]['namespace']] = tp
                     else:
                         self.imports[self.__class__.empty_namespace] = tp
                 elif component == 'redefine':
