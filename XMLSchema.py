@@ -108,6 +108,7 @@ class SchemaReader:
         schema.load(reader)
         self.__setIncludes(schema)
         self.__setImports(schema)
+        return schema
 
     def loadFromFile(self, filename):
         """Return an XMLSchema instance loaded from the given file.
@@ -769,8 +770,9 @@ class XMLSchema(XMLSchemaComponent):
         self.targetNamespace = None
         XMLSchemaComponent.__init__(self, parent)
         f = lambda k: k.attributes[XMLSchemaComponent.xsd]['name']
+        ns = lambda k: k.attributes[XMLSchemaComponent.xsd]['namespace']
         self.includes = Collection(self, key=f)
-        self.imports = Collection(self, key=f)
+        self.imports = Collection(self, key=ns)
         self.elements = Collection(self, key=f)
         self.types = Collection(self, key=f)
         self.attr_decl = Collection(self, key=f)
@@ -917,11 +919,22 @@ class XMLSchema(XMLSchemaComponent):
                 else:
                     break
                 indx += 1
+
+            # (attribute, attributeGroup, complexType, element, group, 
+            # notation, simpleType)*, annotation*)*
             while indx < num:
                 node = contents[indx]
                 component = SplitQName(node.getTagName())[1]
 
-                if component == 'complexType':
+                if component == 'attribute':
+                    tp = AttributeDeclaration(self)
+                    tp.fromDom(node)
+                    self.types[tp.getAttribute('name')] = tp
+                elif component == 'attributeGroup':
+                    tp = AttributeGroupDefinition(self)
+                    tp.fromDom(node)
+                    self.types[tp.getAttribute('name')] = tp
+                elif component == 'complexType':
                     tp = ComplexType(self)
                     tp.fromDom(node)
                     self.types[tp.getAttribute('name')] = tp
@@ -929,18 +942,18 @@ class XMLSchema(XMLSchemaComponent):
                     tp = ElementDeclaration(self)
                     tp.fromDom(node)
                     self.elements[tp.getAttribute('name')] = tp
-                elif component == 'simpleType':
-                    tp = SimpleType(self)
-                    tp.fromDom(node)
-                    self.types[tp.getAttribute('name')] = tp
                 elif component == 'group':
                     tp = ModelGroupDefinition(self)
                     tp.fromDom(node)
-                    self.modelGroups[tp.getAttribute('name')] = tp
+                    self.model_groups[tp.getAttribute('name')] = tp
                 elif component == 'notation':
                     tp = Notation(self)
                     tp.fromDom(node)
                     self.notations[tp.getAttribute('name')] = tp
+                elif component == 'simpleType':
+                    tp = SimpleType(self)
+                    tp.fromDom(node)
+                    self.types[tp.getAttribute('name')] = tp
                 else:
                     break
                 indx += 1
@@ -1110,7 +1123,7 @@ class AttributeDeclaration(XMLSchemaComponent,\
                 self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             elif component == 'simpleType':
-                self.content = SimpleType(self)
+                self.content = AnonymousSimpleType(self)
                 self.content.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1159,7 +1172,7 @@ class LocalAttributeDeclaration(AttributeDeclaration,\
                 self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             elif component == 'simpleType':
-                self.content = SimpleType(self)
+                self.content = AnonymousSimpleType(self)
                 self.content.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1255,7 +1268,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
            id -- ID
            name -- NCName,  required
        contents:
-           annotation?
+           annotation?, (attribute | attributeGroup)*, anyAttribute?
     """
     required = ['name']
     attributes = {'id':None, 
@@ -1265,19 +1278,36 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
     def __init__(self, parent):
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
+        self.attr_content = None
 
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
+        content = []
 
-        for i in contents:
+        for indx in range(len(contents)):
             component = SplitQName(i.getTagName())[1]
-            if component == 'annotation' and not self.annotation:
+            if (component == 'annotation') and (not indx):
                 self.annotation = Annotation(self)
-                self.annotation.fromDom(i)
+                self.annotation.fromDom(contents[indx])
+            elif (component == 'attribute'):
+                if contents[indx].hasattr('name'):
+                    content.append(AttributeDeclaration())
+                elif contents[indx].hasattr('ref'):
+                    content.append(AttributeReference())
+                else:
+                    raise SchemaError, 'Unknown attribute type'
+                content[-1].fromDom(contents[indx])
+            elif (component == 'attributeGroup'):
+                content.append(AttributeGroupReference())
+                content[-1].fromDom(contents[indx])
+            elif (component == 'anyAttribute') and (len(contents) == x+1):
+                content.append(AttributeWildCard())
+                content[-1].fromDom(contents[indx])
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
 
+        self.attr_content = tuple(content)
 
 class AttributeGroupReference(XMLSchemaComponent,\
                               MarkerInterface,\
@@ -1332,7 +1362,7 @@ class IdentityConstrants(XMLSchemaComponent):
         self.fields = None
         self.annotation = None
 
-    def fromDom(node):
+    def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
         fields = []
@@ -1363,7 +1393,7 @@ class IdentityConstrants(XMLSchemaComponent):
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
 
-        def fromDom(node):
+        def fromDom(self, node):
             self.setAttributes(node)
             contents = self.getContents(node)
 
@@ -1965,7 +1995,7 @@ class ComplexType(XMLSchemaComponent,\
                     else:
                         self.attr_content.append(LocalAttributeDeclaration(self))
                 elif component == 'attributeGroup':
-                    self.attr_content.append(AttributeGroupDefinition(self))
+                    self.attr_content.append(AttributeGroupReference(self))
                 elif component == 'anyAttribute':
                     self.attr_content.append(AttributeWildCard(self))
                 else:
@@ -2144,14 +2174,18 @@ class ComplexType(XMLSchemaComponent,\
                    base -- QName, required
 
                contents:
-                   annotation?, (group | all | choice | sequence)?, 
-                       (attribute | attributeGroup)*, anyAttribute?
+                   annotation?, (attribute | attributeGroup)*, anyAttribute?
             """
             required = ['base']
             attributes = {'id':None, 
                 'base':None }
-            contents = {'xsd':['annotation', 'group', 'all', 'choice',\
-                'sequence', 'attribute', 'attributeGroup', 'anyAttribute']}
+            contents = {'xsd':['annotation', 'attribute', 'attributeGroup', 
+                'anyAttribute']}
+
+	    def __init__(self, parent):
+                XMLSchemaComponent.__init__(self, parent)
+                self.annotation = None
+                self.attr_content = None
 
             def fromDom(self, node):
                 self.setAttributes(node)
@@ -2166,35 +2200,24 @@ class ComplexType(XMLSchemaComponent,\
                     indx += 1
                     component = SplitQName(contents[indx].getTagName())[1]
 
-                if component == 'all':
-                    self.content = All(self)
-                elif component == 'choice':
-                    self.content = Choice(self)
-                elif component == 'sequence':
-                    self.content = Sequence(self)
-                elif component == 'group':
-                    self.content = ModelGroupReference(self)
-                else:
-	            raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
-
-                self.content.fromDom(contents[indx])
-                indx += 1
-                self.attr_content = []
+                content = []
                 while indx < num:
                     component = SplitQName(contents[indx].getTagName())[1]
                     if component == 'attribute':
                         if contents[indx].hasattr('ref'):
-                            self.attr_content.append(AttributeReference(self))
+                            content.append(AttributeReference(self))
                         else:
-                            self.attr_content.append(LocalAttributeDeclaration(self))
+                            content.append(LocalAttributeDeclaration(self))
                     elif component == 'attributeGroup':
-                        self.attr_content.append(AttributeGroupDefinition(self))
+                        content.append(AttributeGroupReference(self))
                     elif component == 'anyAttribute':
-                        self.attr_content.append(AttributeWildCard(self))
+                        content.append(AttributeWildCard(self))
                     else:
-	                raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
-                    self.attr_content[-1].fromDom(contents[indx])
+	                raise SchemaError, 'Unknown component (%s)'\
+                            %(contents[indx].getTagName())
+                    content[-1].fromDom(contents[indx])
                     indx += 1
+                self.attr_content = tuple(content)
 
 
         class Restriction(XMLSchemaComponent,\
@@ -2316,7 +2339,7 @@ class SimpleType(XMLSchemaComponent,\
         def fromDom(self, node):
             self.setAttributes(node)
             contents = self.getContents(node)
-            self.content = []
+            content = []
             self.attr_content = []
 
             for indx in range(len(contents)):
@@ -2326,13 +2349,14 @@ class SimpleType(XMLSchemaComponent,\
                     self.annotation.fromDom(contents[indx])
                     continue
                 elif (component == 'simpleType') and (not indx or indx == 1):
-                    self.content.append(SimpleType(self))
-                    self.content[-1].fromDom(contents[indx])
+                    content.append(AnonymousSimpleType(self))
+                    content[-1].fromDom(contents[indx])
                 elif component in RestrictionMarker.facets:
                     #print_debug('%s class instance, skipping %s' %(self.__class__, component))
                     pass
                 else:
                     raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
+            self.content = tuple(content)
 
 
     class Union(XMLSchemaComponent):
@@ -2349,9 +2373,32 @@ class SimpleType(XMLSchemaComponent,\
         attributes = {'id':None, 
             'memberTypes':None }
         contents = {'xsd':['annotation', 'simpleType']}
+        def __init__(self, parent):
+            XMLSchemaComponent.__init__(self, parent)
+            self.annotation = None
+            self.content = None
+            self.attr_content = None
+
+        def fromDom(self, node):
+            self.setAttributes(node)
+            contents = self.getContents(node)
+            content = []
+            self.attr_content = []
+
+            for indx in range(len(contents)):
+                component = SplitQName(contents[indx].getTagName())[1]
+                if (component == 'annotation') and (not indx):
+                    self.annotation = Annotation(self)
+                    self.annotation.fromDom(contents[indx])
+                elif (component == 'simpleType'):
+                    content.append(AnonymousSimpleType(self))
+                    content[-1].fromDom(contents[indx])
+                else:
+                    raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
+            self.content = tuple(content)
 
     class List(XMLSchemaComponent):
-        """<union>
+        """<list>
            parents:
                simpleType
            attributes:
@@ -2362,8 +2409,31 @@ class SimpleType(XMLSchemaComponent,\
                annotation?, simpleType?
         """
         attributes = {'id':None, 
-            'memberTypes':None }
+            'itemType':None }
         contents = {'xsd':['annotation', 'simpleType']}
+        def __init__(self, parent):
+            XMLSchemaComponent.__init__(self, parent)
+            self.annotation = None
+            self.content = None
+            self.attr_content = None
+
+        def fromDom(self, node):
+            self.setAttributes(node)
+            contents = self.getContents(node)
+            self.content = []
+            self.attr_content = []
+
+            for indx in range(len(contents)):
+                component = SplitQName(contents[indx].getTagName())[1]
+                if (component == 'annotation') and (not indx):
+                    self.annotation = Annotation(self)
+                    self.annotation.fromDom(contents[indx])
+                elif (component == 'simpleType'):
+                    self.content = AnonymousSimpleType(self)
+                    self.content.fromDom(contents[indx])
+                    break
+                else:
+                    raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
 
                  
 class AnonymousSimpleType(SimpleType,\
