@@ -36,7 +36,7 @@ else:
             if node.nodeType == Node.ELEMENT_NODE:
                 if not c14n._inclusive(self):
                     self._exclusive = self._inherit_context(node)
-                c14n._implementation.__init__(self, node, write, **kw)
+            c14n._implementation.__init__(self, node, write, **kw)
 
         def _do_element(self, node, initial_other_attrs = []):
             """Patch for the xml.dom.ext.c14n implemenation _do_element method.
