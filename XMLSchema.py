@@ -559,7 +559,8 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             else:
                 raise SchemaError, 'attribute %s declared multiple times' %value
 
-        self.__checkAttributes()
+        if not isinstance(self, WSDLToolsAdapter):
+            self.__checkAttributes()
         self.__setAttributeDefaults()
 
         #set QNames
