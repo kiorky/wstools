@@ -454,7 +454,6 @@ class PortType(Element):
         self.name = DOM.getAttr(element, 'name')
         self.documentation = GetDocumentation(element)
         self.targetNamespace = DOM.getAttr(element, 'targetNamespace')
-        print "PORTYPE TNS: ", self.targetNamespace
 
         if DOM.hasAttr(element, 'ResourceProperties', WSR.PROPERTIES):
             rpref = DOM.getAttr(element, 'ResourceProperties', WSR.PROPERTIES)

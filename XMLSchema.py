@@ -1167,9 +1167,6 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
             contents = self.getContents(node)
 
-            print "PARENT: ", self._parent()
-            print "\ttns: ", self.getTargetNamespace()
-            #if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
             if self.attributes['namespace'] == self.getTargetNamespace():
                 raise SchemaError, 'namespace of schema and import match'
 
