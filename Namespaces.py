@@ -72,7 +72,7 @@ class OASIS:
     '''
     WSSE    = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
     UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-
+    
 
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
@@ -99,5 +99,6 @@ class WSA:
 class WSP:
     POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 
-
+class BEA:
+    SECCONV = "http://schemas.xmlsoap.org/ws/2004/04/sc"
 
