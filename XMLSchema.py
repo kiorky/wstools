@@ -201,13 +201,13 @@ class DOMAdapter(DOMAdapterInterface):
 
     def loadDocument(self, file):
         self.__node = DOM.loadDocument(file)
-        if hasattr(node, 'documentElement'):
+        if hasattr(self.__node, 'documentElement'):
             self.__node = node.documentElement
 
     def loadFromURL(self, url):
         self.__node = DOM.loadFromURL(url)
-        if hasattr(node, 'documentElement'):
-            self.__node = node.documentElement
+        if hasattr(self.__node, 'documentElement'):
+            self.__node = self.__node.documentElement
 
  
 class XMLBase: 
