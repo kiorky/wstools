@@ -152,15 +152,15 @@ class WSDL:
                 location = DOM.getAttr(element, 'location')
                 imported[location] = 1
 
-        reader = SchemaReader()
+        reader = SchemaReader(base_url=self.location)
         for element in DOM.getElements(definitions, None, None):
             localName = element.localName
 
             if not DOM.nsUriMatch(element.namespaceURI, NS_WSDL):
                 if localName == 'schema':
-                    self.types.addSchema(
-                        reader.loadFromNode(WSDLToolsAdapter(self), element)
-                        )
+                    schema = reader.loadFromNode(WSDLToolsAdapter(self), element)
+                    schema.setBaseUrl(self.location)
+                    self.types.addSchema(schema)
                 else:
                     self.extensions.append(element)
                 continue
@@ -209,9 +209,9 @@ class WSDL:
                 self.types.documentation = GetDocumentation(element)
                 for item in DOM.getElements(element, None, None):
                     if item.localName == 'schema':
-                        self.types.addSchema(
-                            reader.loadFromNode(WSDLToolsAdapter(self), item)
-                            )
+                        schema = reader.loadFromNode(WSDLToolsAdapter(self), item)
+                        schema.setBaseUrl(self.location)
+                        self.types.addSchema(schema)
                     else:
                         self.types.addExtension(item)
                 continue

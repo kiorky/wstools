@@ -62,9 +62,11 @@ def GetSchema(component):
 class SchemaReader:
     """A SchemaReader creates XMLSchema objects from urls and xml data.
     """
-    def __init__(self, domReader=None):
+    def __init__(self, domReader=None, base_url=None):
         """domReader -- class must implement DOMAdapterInterface
+           base_url -- base url string
         """
+        self.__base_url = base_url
         self.__readerClass = domReader
         if not self.__readerClass:
             self.__readerClass = DOMAdapter
@@ -105,6 +107,7 @@ class SchemaReader:
         schema = XMLSchema(parent)
         #HACK to keep a reference
         schema.wsdl = parent
+        schema.setBaseUrl(self.__base_url)
         schema.load(reader)
         return schema
         
@@ -115,6 +118,7 @@ class SchemaReader:
         reader = self.__readerClass()
         reader.loadDocument(file)
         schema = XMLSchema()
+        schema.setBaseUrl(self.__base_url)
         schema.load(reader)
         self.__setIncludes(schema)
         self.__setImports(schema)
@@ -133,8 +137,11 @@ class SchemaReader:
         if not url.endswith('xsd'):
             raise SchemaError, 'unknown file type %s' %url
         reader = self.__readerClass()
+        if self.__base_url:
+            url = urllib.basejoin(self.__base_url,url)
         reader.loadFromURL(url)
         schema = XMLSchema()
+        schema.setBaseUrl(self.__base_url)
         schema.load(reader)
         self.__setIncludes(schema)
         self.__setImports(schema)
@@ -944,7 +951,8 @@ class XMLSchema(XMLSchemaComponent):
                         'attr_decl','attr_groups','model_groups','notations']:
                         for k,v in getattr(schema,collection).items():
                             if not getattr(self,collection).has_key(k):
-                                setattr(self,collection,v)                             
+                                v._parent = weakref.ref(self)
+                                getattr(self,collection)[k] = v
 
                 elif component == 'import':
                     tp = self.__class__.Import(self)
@@ -1065,14 +1073,11 @@ class XMLSchema(XMLSchemaComponent):
                 if not schema:
                     if not self.attributes.has_key('schemaLocation'):
                         raise SchemaError, 'namespace(%s) is unknown' %ns
-
-                    url = urllib.basejoin(self._parent().getBaseUrl(),\
-                           self.attributes['schemaLocation'])
-                    reader = SchemaReader()
+                    base_url = self._parent().getBaseUrl()
+                    reader = SchemaReader(base_url=base_url)
                     reader._imports = self._parent().getImportSchemas()
                     reader._includes = self._parent().getIncludeSchemas()
                     self._schema = reader.loadFromURL(url)
-                    self._schema.setBaseUrl(url)
             return self._schema or schema
 
 
@@ -1114,17 +1119,19 @@ class XMLSchema(XMLSchemaComponent):
                and create a new Schema class instance.  
             """
             if not self._schema:
-                schema = self._parent()._parent()
-                self._schema = schema.getIncludeSchemas(\
-                    self.attributes['schemaLocation'])
+                #schema = self._parent()._parent()
+                schema = self._parent()
+                #self._schema = schema.getIncludeSchemas(\
+                #    self.attributes['schemaLocation'])
+                self._schema = schema.getIncludeSchemas().get(\
+                                   self.attributes['schemaLocation']
+                                   )
                 if not self._schema:
-                    url = BaseUriResolver().normalize(\
-                       self.attributes['schemaLocation'], schema.getBaseUrl())
-                    reader = SchemaReader()
+                    url = self.attributes['schemaLocation']
+                    reader = SchemaReader(base_url=schema.getBaseUrl())
                     reader._imports = schema.getImportSchemas()
                     reader._includes = schema.getIncludeSchemas()
                     self._schema = reader.loadFromURL(url)
-                    self._schema.setBaseUrl(url)
             return self._schema
 
 
