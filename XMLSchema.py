@@ -21,7 +21,14 @@ from xml.ns import SCHEMA, XMLNS
 from Utility import DOM, Collection
 from StringIO import StringIO
 
-
+def GetSchema(component):
+    """convience function for finding the parent XMLSchema instance.
+    """
+    parent = component
+    while not isinstance(parent, XMLSchema):
+        parent = parent._parent()
+    return parent
+    
 class SchemaReader:
     """A SchemaReader creates XMLSchema objects from urls and xml data.
     """
@@ -292,9 +299,7 @@ class XMLSchemaComponent(XMLBase):
         type_def = None
         tdc = self.attributes.get(attribute)
         if tdc:
-            parent = self
-            while not isinstance(parent, Schema):
-                parent = parent._parent()
+            parent = GetSchema(self)
             if parent.targetNamespace == tdc.getTargetNamespace():
                 type_def = getattr(parent, collection)[tdc.getName()]
             elif parent.imports.has_key(tdc.getTargetNamespace()):
@@ -366,12 +371,12 @@ class XMLSchemaComponent(XMLBase):
            class variable representing attribute is None, then
            it must be defined as a instance variable.
         """
-        for k,v in self.attributes.items():
-            if (not v) and (k != 'xmlns'):
-                default_attr = getattr(self.__class__.attributes, k)
-                if isinstance(default_attr, types.FunctionType):
-                    default_attr = default_attr()
-                self.attributes[k] = default_attr
+        for k,v in self.__class__.attributes.items():
+            if v and not self.attributes.has_key(k):
+                if isinstance(v, types.FunctionType):
+                    self.attributes[k] = v(self)
+                else:
+                    self.attributes[k] = v
 
     def __checkAttributes(self):
         """Checks that required attributes have been defined,
@@ -800,6 +805,26 @@ class XMLSchema(XMLSchemaComponent):
         """
         self._base_url = url
 
+    def getElementFormDefault(self):
+        """return elementFormDefault attribute
+        """
+        return self.attributes['elementFormDefault']
+
+    def getAttributeFormDefault(self):
+        """return attributeFormDefault attribute
+        """
+        return self.attributes['attributeFormDefault']
+
+    def getBlockDefault(self):
+        """return blockDefault attribute
+        """
+        return self.attributes.get('blockDefault')
+
+    def getFinalDefault(self):
+        """return finalDefault attribute 
+        """
+        return self.attributes.get('finalDefault')
+
     def load(self, node):
         self.setAttributes(node)
         self.targetNamespace = self.getTargetNamespace()
@@ -1062,7 +1087,7 @@ class LocalAttributeDeclaration(AttributeDeclaration,\
     attributes = {'id':None, 
         'name':None,
         'type':None,
-        'form':lambda: self._parent.parent().getAttributeFormDefault(),
+        'form':lambda self: GetSchema(self).getAttributeFormDefault(),
         'use':'optional',
         'default':None,
         'fixed':None}
@@ -1420,8 +1445,8 @@ class ElementDeclaration(XMLSchemaComponent,\
         'fixed':None,
         'nillable':0,
         'abstract':0,
-        'block':lambda: self.parent.parent().getBlockDefault(),
-        'final':lambda: self.parent.parent().getFinalDefault()}
+        'block':lambda self: self._parent().getBlockDefault(),
+        'final':lambda self: self._parent().getFinalDefault()}
     contents = {'xsd':['annotation', 'simpleType', 'complexType', 'key',\
         'keyref', 'unique']}
 
@@ -1488,7 +1513,7 @@ class LocalElementDeclaration(ElementDeclaration,\
     required = ['name']
     attributes = {'id':None, 
         'name':None,
-        'form':lambda: self._parent.parent().getElementFormDefault(),
+        'form':lambda self: GetSchema(self).getElementFormDefault(),
         'type':None,
         'minOccurs':'1',
         'maxOccurs':'1',
@@ -1496,7 +1521,7 @@ class LocalElementDeclaration(ElementDeclaration,\
         'fixed':None,
         'nillable':0,
         'abstract':0,
-        'block':lambda: self.parent.parent().getBlockDefault()}
+        'block':lambda self: GetSchema(self).getBlockDefault()}
     contents = {'xsd':['annotation', 'simpleType', 'complexType', 'key',\
         'keyref', 'unique']}
 
@@ -1831,8 +1856,8 @@ class ComplexType(XMLSchemaComponent,\
         'name':None,
         'mixed':0,
         'abstract':0,
-        'block':lambda: self._parent.parent().getBlockDefault(),
-        'final':lambda: self._parent.parent().getFinalDefault()}
+        'block':lambda self: self._parent().getBlockDefault(),
+        'final':lambda self: self._parent().getFinalDefault()}
     contents = {'xsd':['annotation', 'simpleContent', 'complexContent',\
         'group', 'all', 'choice', 'sequence', 'attribute', 'attributeGroup',\
         'anyAttribute', 'any']}
@@ -2178,7 +2203,7 @@ class SimpleType(XMLSchemaComponent,\
     required = ['name']
     attributes = {'id':None,
         'name':None,
-        'final':lambda: self._parent.parent().getFinalDefault()}
+        'final':lambda self: self._parent().getFinalDefault()}
     contents = {'xsd':['annotation', 'restriction', 'list', 'union']}
 
     def __init__(self, parent):
