@@ -197,6 +197,12 @@ class DOMAdapterInterface:
         """
         raise NotImplementedError, 'adapter method not implemented'
 
+
+    def getParentNode(self):
+        """returns parent element in DOMAdapter or None
+        """
+        raise NotImplementedError, 'adapter method not implemented'
+
     def loadDocument(self, file):
         """load a Document from a file object
            file --
@@ -254,6 +260,11 @@ class DOMAdapter(DOMAdapterInterface):
 
     def getTagName(self):
         return self.__node.tagName
+
+    def getParentNode(self):
+        if self.__node.parentNode.nodeType == self.__node.ELEMENT_NODE:
+            return DOMAdapter(self.__node.parentNode)
+        return None
 
     def getNamespace(self, prefix):
         """prefix -- deference namespace prefix in node's context.
@@ -387,6 +398,8 @@ class XMLSchemaComponent(XMLBase):
             parent = parent._parent()
             ns = parent.attributes[XMLSchemaComponent.xmlns].get(prefix or\
                     XMLSchemaComponent.xmlns_key)
+            if not ns and isinstance(parent, WSDLToolsAdapter):
+                raise SchemaError, 'unknown prefix %s' %prefix
         return ns
 
     def getAttribute(self, attribute):
@@ -927,7 +940,22 @@ class XMLSchema(XMLSchemaComponent):
         return self.attributes.get('finalDefault')
 
     def load(self, node):
-        self.setAttributes(node)
+        pnode = node.getParentNode()
+        if pnode:
+            pname = SplitQName(pnode.getTagName())[1]
+            if pname == 'types':
+                attributes = {}
+                self.setAttributes(pnode)
+                attributes.update(self.attributes)
+                self.setAttributes(node)
+                for k,v in attributes['xmlns'].items():
+                    if not self.attributes['xmlns'].has_key(k):
+                        self.attributes['xmlns'][k] = v
+            else:
+                self.setAttributes(node)
+        else:
+            self.setAttributes(node)
+
         self.targetNamespace = self.getTargetNamespace()
         contents = self.getContents(node)
 
