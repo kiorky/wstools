@@ -1131,12 +1131,12 @@ def callInfoFromWSDL(port, name):
         except KeyError:
             if self.strict:
                 raise RuntimeError(
-                    "Recieved message not defined in the WSDL schema: %s",
+                    "Recieved message not defined in the WSDL schema: %s" %
                     operation.output.message)
             else:
                 message = wsdl.addMessage(operation.output.message)
-                print "Warning:",
-                      "Recieved message not defined in the WSDL schema.",
+                print "Warning:", \
+                      "Recieved message not defined in the WSDL schema.", \
                       "Adding it."
                 print "Message:", operation.output.message
          
