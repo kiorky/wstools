@@ -945,11 +945,11 @@ class XMLSchema(XMLSchemaComponent):
                 if component == 'attribute':
                     tp = AttributeDeclaration(self)
                     tp.fromDom(node)
-                    self.types[tp.getAttribute('name')] = tp
+                    self.attr_decl[tp.getAttribute('name')] = tp
                 elif component == 'attributeGroup':
                     tp = AttributeGroupDefinition(self)
                     tp.fromDom(node)
-                    self.types[tp.getAttribute('name')] = tp
+                    self.attr_groups[tp.getAttribute('name')] = tp
                 elif component == 'complexType':
                     tp = ComplexType(self)
                     tp.fromDom(node)
