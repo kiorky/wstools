@@ -456,11 +456,22 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         tdc = self.attributes.get(attribute)
         if tdc:
             parent = GetSchema(self)
-            if parent.targetNamespace == tdc.getTargetNamespace():
-                obj = getattr(parent, collection)[tdc.getName()]
-            elif parent.imports.has_key(tdc.getTargetNamespace()):
-                schema = parent.imports[tdc.getTargetNamespace()].getSchema()
-                obj = getattr(schema, collection)[tdc.getName()]
+            targetNamespace = tdc.getTargetNamespace()
+            if parent.targetNamespace == targetNamespace:
+                item = tdc.getName()
+                try:
+                    obj = getattr(parent, collection)[item]
+                except KeyError, ex:
+                    raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
+                        %(targetNamespace, collection, item)
+            elif parent.imports.has_key(targetNamespace):
+                schema = parent.imports[targetNamespace].getSchema()
+                item = tdc.getName()
+                try:
+                    obj = getattr(schema, collection)[item]
+                except KeyError, ex:
+                    raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
+                        %(targetNamespace, collection, item)
         return obj
 
     def getXMLNS(self, prefix=None):
