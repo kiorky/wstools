@@ -50,6 +50,9 @@ class RecursionError(Exception):
     """Used to indicate a HTTP redirect recursion."""
     pass
 
+class ParseError(Exception):
+    """Used to indicate a XML parsing error."""
+
 class HTTPResponse:
     """Captures the information in an HTTP response message."""
 
@@ -574,8 +577,13 @@ class DOM:
     def loadFromURL(self, url):
         """Load an xml file from a URL and return a DOM document."""
         file = urlopen(url)
-        try:     result = self.loadDocument(file)
-        finally: file.close()
+        try:     
+            result = self.loadDocument(file)
+        except Exception, ex:
+            file.close()
+            raise ParseError(('Failed to load document %s' %url,) + ex.args)
+        else:
+            file.close()
         return result
 
 

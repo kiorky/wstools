@@ -1468,7 +1468,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
                 self.annotation.fromDom(contents[indx])
             elif component == 'attribute':
                 if contents[indx].hasattr('name'):
-                    content.append(AttributeDeclaration(self))
+                    content.append(LocalAttributeDeclaration(self))
                 elif contents[indx].hasattr('ref'):
                     content.append(AttributeReference(self))
                 else:
