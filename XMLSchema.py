@@ -534,6 +534,12 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         """
         return self.getQNameAttribute('elements', attribute)
 
+    def getModelGroup(self, attribute):
+        """attribute -- attribute with a QName value (eg. ref).
+           collection -- check model_group collection in parent Schema instance.
+        """
+        return self.getQNameAttribute('model_groups', attribute)
+
     def getQNameAttribute(self, collection, attribute):
         """returns object instance representing QName --> (namespace,name),
            or if does not exist return None.
@@ -2175,6 +2181,9 @@ class ModelGroupReference(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
 
+    def getModelGroupReference(self):
+        return self.getModelGroup('ref')
+
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
@@ -2690,6 +2699,11 @@ class SimpleType(XMLSchemaComponent,\
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
             self.content = None
+
+        def getSimpleTypeContent(self):
+            for el in self.content:
+                if el.isSimple(): return el
+            return None
 
         def fromDom(self, node):
             self.setAttributes(node)
