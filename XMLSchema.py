@@ -286,28 +286,28 @@ class XMLSchemaComponent(XMLBase):
         """
         return self.getQNameAttribute('types', attribute)
 
-    def getElementDeclration(self, attribute):
+    def getElementDeclaration(self, attribute):
         """attribute -- attribute with a QName value (eg. element).
            collection -- check elements collection in parent Schema instance.
         """
         return self.getQNameAttribute('elements', attribute)
 
     def getQNameAttribute(self, collection, attribute):
-        """attribute -- an information item attribute, with a QName value.
+        """returns object instance representing QName --> (namespace,name),
+           or if does not exist return None.
+           attribute -- an information item attribute, with a QName value.
            collection -- collection in parent Schema instance to search.
         """
-        type_def = None
+        obj = None
         tdc = self.attributes.get(attribute)
         if tdc:
             parent = GetSchema(self)
             if parent.targetNamespace == tdc.getTargetNamespace():
-                type_def = getattr(parent, collection)[tdc.getName()]
+                obj = getattr(parent, collection)[tdc.getName()]
             elif parent.imports.has_key(tdc.getTargetNamespace()):
                 schema = parent.imports[tdc.getTargetNamespace()].getSchema()
-                type_def = getattr(schema, collection)[tdc.getName()]
-            else:
-                raise SchemaError, 'missing import %s' %tdc
-        return type_def
+                obj = getattr(schema, collection)[tdc.getName()]
+        return obj
 
     def getXMLNS(self, prefix=None):
         """retrieve contents
@@ -937,7 +937,7 @@ class XMLSchema(XMLSchemaComponent):
             contents = self.getContents(node)
 
             if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
-                raise SchemaError, 'namespace (%s) of schema and import match'
+                raise SchemaError, 'namespace of schema and import match'
 
             for i in contents:
                 component = SplitQName(i.getTagName())[1]
