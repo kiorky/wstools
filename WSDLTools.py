@@ -9,11 +9,11 @@
 
 ident = "$Id$"
 
-from Utility import DOM, Collection, CollectionNS
+import urllib, weakref
+from cStringIO import StringIO
+from Namespaces import OASIS, WSA, XMLNS
+from Utility import Collection, CollectionNS, DOM, ElementProxy
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
-from Namespaces import WSR, WSA
-from StringIO import StringIO
-import urllib
 
 
 class WSDLReader:
@@ -129,6 +129,39 @@ class WSDL:
         item = ImportElement(namespace, location)
         self.imports[namespace] = item
         return item
+
+    def toDom(self):
+        """ Generate a DOM representation of the WSDL instance.
+        Not dealing with generating XML Schema, thus the targetNamespace
+        of all XML Schema elements or types used by WSDL message parts 
+        needs to be specified via import information items.
+        """
+        namespaceURI = DOM.GetWSDLUri(self.version)
+        self.document = DOM.createDocument(namespaceURI ,'wsdl:definitions')
+
+        # Set up a couple prefixes for easy reading.
+        child = DOM.getElement(self.document, None)
+        child.setAttributeNS(None, 'targetNamespace', self.targetNamespace)
+        child.setAttributeNS(XMLNS.BASE, 'xmlns:wsdl', namespaceURI)
+        child.setAttributeNS(XMLNS.BASE, 'xmlns:xsd', 'http://www.w3.org/1999/XMLSchema')
+        child.setAttributeNS(XMLNS.BASE, 'xmlns:soap', 'http://schemas.xmlsoap.org/wsdl/soap/')
+        child.setAttributeNS(XMLNS.BASE, 'xmlns:tns', self.targetNamespace)
+
+        # wsdl:import
+        for item in self.imports: 
+            item.toDom()
+        # wsdl:message
+        for item in self.messages:
+            item.toDom()
+        # wsdl:portType
+        for item in self.portTypes:
+            item.toDom()
+        # wsdl:binding
+        for item in self.bindings:
+            item.toDom()
+        # wsdl:service
+        for item in self.services:
+            item.toDom()
 
     def load(self, document):
         # We save a reference to the DOM document to ensure that elements
@@ -330,6 +363,7 @@ class Element:
         self.extensions = []
 
     def addExtension(self, item):
+        item.parent = weakref.ref(self)
         self.extensions.append(item)
 
 
@@ -337,6 +371,17 @@ class ImportElement(Element):
     def __init__(self, namespace, location):
         self.namespace = namespace
         self.location = location
+
+    def getWSDL(self):
+        """Return the WSDL object that contains this Message Part."""
+        return self.parent().parent()
+
+    def toDom(self):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, DOM.getElement(wsdl.document, None))
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'import')
+        epc.setAttributeNS(None, 'namespace', self.namespace)
+        epc.setAttributeNS(None, 'location', self.location)
 
     _loaded = None
 
@@ -393,6 +438,19 @@ class Message(Element):
             if elemref is not None:
                 part.element = ParseTypeRef(elemref, element)
 
+    def getWSDL(self):
+        """Return the WSDL object that contains this Message Part."""
+        return self.parent().parent()
+
+    def toDom(self):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, DOM.getElement(wsdl.document, None))
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'message')
+        epc.setAttributeNS(None, 'name', self.name)
+
+        for part in self.parts:
+            part.toDom(epc._getNode())
+
 
 class MessagePart(Element):
     def __init__(self, name):
@@ -415,6 +473,22 @@ class MessagePart(Element):
         nsuri,name = self.element
         schema = wsdl.types.get(nsuri, {})
         return schema.get(name)
+
+    def toDom(self, node):
+        """node -- node representing message"""
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'part')
+        epc.setAttributeNS(None, 'name', self.name)
+
+        if self.element is not None:
+            ns,name = self.element
+            prefix = epc.getPrefix(ns)
+            epc.setAttributeNS(None, 'element', '%s:%s'%(prefix,name))
+        elif self.type is not None:
+            ns,name = self.type
+            prefix = epc.getPrefix(ns)
+            epc.setAttributeNS(None, 'type', '%s:%s'%(prefix,name))
 
 
 class PortType(Element):
@@ -455,8 +529,8 @@ class PortType(Element):
         self.documentation = GetDocumentation(element)
         self.targetNamespace = DOM.getAttr(element, 'targetNamespace')
 
-        if DOM.hasAttr(element, 'ResourceProperties', WSR.PROPERTIES):
-            rpref = DOM.getAttr(element, 'ResourceProperties', WSR.PROPERTIES)
+        if DOM.hasAttr(element, 'ResourceProperties', OASIS.PROPERTIES):
+            rpref = DOM.getAttr(element, 'ResourceProperties', OASIS.PROPERTIES)
             self.resourceProperties = ParseQName(rpref, element)
 
         NS_WSDL = DOM.GetWSDLUri(self.getWSDL().version)
@@ -501,6 +575,20 @@ class PortType(Element):
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                 operation.addFault(message, name, docs, action)
                 
+    def toDom(self):
+        wsdl = self.getWSDL()
+
+        ep = ElementProxy(None, DOM.getElement(wsdl.document, None))
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'portType')
+        epc.setAttributeNS(None, 'name', self.name)
+        if self.resourceProperties:
+            ns,name = self.resourceProperties
+            prefix = epc.getPrefix(ns)
+            epc.setAttributeNS(OASIS.PROPERTIES, 'ResourceProperties', '%s:%s'%(prefix,name))
+
+        for op in self.operations:
+            op.toDom(epc._getNode())
+
 
 
 class Operation(Element):
@@ -510,6 +598,10 @@ class Operation(Element):
         self.faults = Collection(self)
         self.input = None
         self.output = None
+
+    def getWSDL(self):
+        """Return the WSDL object that contains this Operation."""
+        return self.parent().parent().parent().parent()
 
     def getPortType(self):
         return self.parent().parent()
@@ -553,11 +645,27 @@ class Operation(Element):
 
     def setInput(self, message, name='', documentation='', action=None):
         self.input = MessageRole('input', message, name, documentation, action)
+        self.input.parent = weakref.ref(self)
         return self.input
 
     def setOutput(self, message, name='', documentation='', action=None):
         self.output = MessageRole('output', message, name, documentation, action)
+        self.output.parent = weakref.ref(self)
         return self.output
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'operation')
+        epc.setAttributeNS(None, 'name', self.name)
+        node = epc._getNode()
+        if self.input:
+           self.input.toDom(node)
+        if self.output:
+           self.output.toDom(node)
+        for fault in self.faults:
+           fault.toDom(node)
 
 
 class MessageRole(Element):
@@ -567,6 +675,22 @@ class MessageRole(Element):
         self.type = type
         self.action = action
 
+    def getWSDL(self):
+        """Return the WSDL object that contains this MessageRole."""
+        if self.parent().getWSDL() == 'fault':
+            return self.parent().parent().getWSDL()
+        return self.parent().getWSDL()
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), self.type)
+        epc.setAttributeNS(None, 'message', self.message)
+
+        if self.action:
+            epc.setAttributeNS(WSA.ADDRESS2004, 'Action', self.action)
+        
 
 class Binding(Element):
     def __init__(self, name, type, documentation=''):
@@ -641,6 +765,22 @@ class Binding(Element):
             else:
                 self.addExtension(e)
 
+    def toDom(self):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, DOM.getElement(wsdl.document, None))
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'binding')
+        epc.setAttributeNS(None, 'name', self.name)
+
+        ns,name = self.type
+        prefix = epc.getPrefix(ns)
+        epc.setAttributeNS(None, 'type', '%s:%s' %(prefix,name))
+
+        node = epc._getNode()
+        for ext in self.extensions:
+            ext.toDom(node)
+        for op_binding in self.operations:
+            op_binding.toDom(node)
+
 
 class OperationBinding(Element):
     def __init__(self, name, documentation=''):
@@ -648,6 +788,11 @@ class OperationBinding(Element):
         self.input = None
         self.output = None
         self.faults = Collection(self)
+
+    def getWSDL(self):
+        """Return the WSDL object that contains this binding."""
+        return self.parent().parent().parent().parent()
+
 
     def getBinding(self):
         """Return the parent Binding object of the operation binding."""
@@ -669,12 +814,14 @@ class OperationBinding(Element):
     def addInputBinding(self, binding):
         if self.input is None:
             self.input = MessageRoleBinding('input')
+            self.input.parent = weakref.ref(self)
         self.input.addExtension(binding)
         return binding
 
     def addOutputBinding(self, binding):
         if self.output is None:
             self.output = MessageRoleBinding('output')
+            self.output.parent = weakref.ref(self)
         self.output.addExtension(binding)
         return binding
 
@@ -702,11 +849,33 @@ class OperationBinding(Element):
             else:
                 self.addExtension(e)
 
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), 'operation')
+        epc.setAttributeNS(None, 'name', self.name)
+
+        node = epc._getNode()
+        for ext in self.extensions:
+            ext.toDom(node)
+        if self.input:
+            self.input.toDom(node)
+        if self.output:
+            self.output.toDom(node)
+        for fault in self.faults:
+            fault.toDom(node)
+
 
 class MessageRoleBinding(Element):
     def __init__(self, type, name='', documentation=''):
         Element.__init__(self, name, documentation)
         self.type = type
+
+    def getWSDL(self):
+        """Return the WSDL object that contains this MessageRole."""
+        if self.type == 'fault':
+            return self.parent().parent().getWSDL()
+        return self.parent().getWSDL()
 
     def findBinding(self, kind):
         for item in self.extensions:
@@ -795,6 +964,15 @@ class MessageRoleBinding(Element):
             else:
                 self.addExtension(e)
 
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), self.type)
+
+        node = epc._getNode()
+        for item in self.extensions:
+            if item: item.toDom(node)
+
 
 class Service(Element):
     def __init__(self, name, documentation=''):
@@ -826,11 +1004,24 @@ class Service(Element):
         for e in elements:
             self.addExtension(e)
 
+    def toDom(self):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, DOM.getElement(wsdl.document, None))
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), "service")
+        epc.setAttributeNS(None, "name", self.name)
+
+        node = epc._getNode()
+        for port in self.ports:
+            port.toDom(node)
+
 
 class Port(Element):
     def __init__(self, name, binding, documentation=''):
         Element.__init__(self, name, documentation)
         self.binding = binding
+
+    def getWSDL(self):
+        return self.parent().parent().getWSDL()
 
     def getService(self):
         """Return the Service object associated with this port."""
@@ -874,22 +1065,68 @@ class Port(Element):
             else:
                 self.addExtension(e)
 
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), "port")
+        epc.setAttributeNS(None, "name", self.name)
+
+        ns,name = self.binding
+        prefix = epc.getPrefix(ns)
+        epc.setAttributeNS(None, "binding", "%s:%s" %(prefix,name))
+
+        node = epc._getNode()
+        for ext in self.extensions:
+            ext.toDom(node)
+
 
 class SoapBinding:
     def __init__(self, transport, style='rpc'):
         self.transport = transport
         self.style = style
 
+    def getWSDL(self):
+        return self.parent().getWSDL()
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLSoapBindingUri(wsdl.version), 'binding')
+        if self.transport:
+            epc.setAttributeNS(None, "transport", self.transport)
+        if self.style:
+            epc.setAttributeNS(None, "style", self.style)
 
 class SoapAddressBinding:
     def __init__(self, location):
         self.location = location
+
+    def getWSDL(self):
+        return self.parent().getWSDL()
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLSoapBindingUri(wsdl.version), 'address')
+        epc.setAttributeNS(None, "location", self.location)
 
 
 class SoapOperationBinding:
     def __init__(self, soapAction=None, style=None):
         self.soapAction = soapAction
         self.style = style
+
+    def getWSDL(self):
+        return self.parent().getWSDL()
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLSoapBindingUri(wsdl.version), 'operation')
+        if self.soapAction:
+            epc.setAttributeNS(None, 'soapAction', self.soapAction)
+        if self.style:
+            epc.setAttributeNS(None, 'style', self.style)
 
 
 class SoapBodyBinding:
@@ -904,6 +1141,17 @@ class SoapBodyBinding:
             parts = parts.split()
         self.parts = parts
         self.use = use
+
+    def getWSDL(self):
+        return self.parent().getWSDL()
+
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLSoapBindingUri(wsdl.version), 'body')
+        epc.setAttributeNS(None, "use", self.use)
+        epc.setAttributeNS(None, "namespace", self.namespace)
+
 
 class SoapFaultBinding:
     def __init__(self, name, use, namespace=None, encodingStyle=None):

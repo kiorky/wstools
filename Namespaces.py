@@ -75,6 +75,7 @@ class OASIS:
     WSSE    = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
     UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
     LIFETIME = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceLifetime-1.2-draft-01.xsd"
+    PROPERTIES = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceProperties-1.2-draft-01.wsdl"
 
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
@@ -109,3 +110,5 @@ class GLOBUS:
     SECCONV = "http://wsrf.globus.org/core/2004/07/security/secconv"
     CORE    = "http://www.globus.org/namespaces/2004/06/core"
     SIG     = "http://www.globus.org/2002/04/xmlenc#gssapi-sign"
+
+ZSI_SCHEMA_URI = 'http://www.zolera.com/schemas/ZSI/'
