@@ -41,6 +41,8 @@ class SchemaReader:
         finally: file.close()
         return schema
 
+class SchemaError(Exception):
+    pass
 
 class XMLSchema:
     # This is temporary, for the benefit of WSDL until the real thing works.
@@ -92,7 +94,7 @@ class realXMLSchema:
             'blockDefault', 'finalDefault', 'version', 'id'
             ):
             value = DOM.getAttr(schema, attrname, None, None)
-            if attr is not None:
+            if value is not None:
                 setattr(self, attrname, value)
 
 
