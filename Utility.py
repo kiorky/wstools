@@ -19,6 +19,11 @@ from TimeoutSocket import TimeoutSocket, TimeoutError
 from StringIO import StringIO
 from urlparse import urlparse
 from httplib import HTTPConnection, HTTPSConnection
+from exceptions import Exception
+
+class RecursionError(Exception):
+    """Used to indicate a HTTP redirect recursion."""
+    pass
 
 class HTTPResponse:
     """Captures the information in an HTTP response message."""
@@ -724,13 +729,13 @@ if 1:
 		clone.entities._seq = []
 		clone.notations._seq = []
 		for n in node.notations._seq:
-		    notation = Notation(n.nodeName, n.publicId, n.systemId)
+		    notation = xml.dom.minidom.Notation(n.nodeName, n.publicId, n.systemId)
 		    notation.ownerDocument = newOwnerDocument
 		    clone.notations._seq.append(notation)
 		    if hasattr(n, '_call_user_data_handler'):
 			n._call_user_data_handler(operation, n, notation)
 		for e in node.entities._seq:
-		    entity = Entity(e.nodeName, e.publicId, e.systemId,
+		    entity = xml.dom.minidom.Entity(e.nodeName, e.publicId, e.systemId,
 				    e.notationName)
 		    entity.actualEncoding = e.actualEncoding
 		    entity.encoding = e.encoding
