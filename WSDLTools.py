@@ -1171,12 +1171,14 @@ def callInfoFromWSDL(port, name):
                 parts = message.parts.values()
 
             if parts:
-                callinfo.setReturnParameter(
-                    parts[0].name,
-                    parts[0].element or parts[0].type,
-                    element_type = parts[0].element and 1 or 0
-                    )
-                for part in parts[1:]:
+                # XXX no idea what this is for, but it breaks everything. jrb
+                #callinfo.setReturnParameter(
+                #    parts[0].name,
+                #    parts[0].element or parts[0].type,
+                #    element_type = parts[0].element and 1 or 0
+                #    )
+                #for part in parts[1:]:
+                for part in parts:
                     callinfo.addOutParameter(
                         part.name,
                         part.element or part.type,
