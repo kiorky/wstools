@@ -10,3 +10,5 @@
 """WSDL parsing services package for Web Services for Python."""
 
 from ServiceProxy import ServiceProxy
+import ieee754
+import XMLname
