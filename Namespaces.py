@@ -76,6 +76,7 @@ class OASIS:
 
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
+    TRUST   = "http://schemas.xmlsoap.org/ws/2004/04/trust"
 
 
 class WSU:
@@ -102,3 +103,6 @@ class WSP:
 class BEA:
     SECCONV = "http://schemas.xmlsoap.org/ws/2004/04/sc"
 
+class GLOBUS:
+    SECCONV = "http://wsrf.globus.org/core/2004/07/security/secconv"
+    CORE    = "http://www.globus.org/namespaces/2004/06/core"
