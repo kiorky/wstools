@@ -403,6 +403,10 @@ class WSDLToolsAdapter(XMLSchemaComponent):
         XMLSchemaComponent.__init__(self, None)
         self.setAttributes(DOMAdapter(wsdl.document))
 
+    def getImportSchemas(self):
+        """returns WSDLTools.WSDL types Collection
+        """
+        return self._parent().types
 
 """Marker Interface:  can determine something about an instances properties by using 
         the provided convenience functions.
@@ -471,38 +475,38 @@ class ComplexMarker:
     pass
 
 class MarkerInterface:
-    def isDefinition(self, what):
-        return isinstance(what, DefinitionMarker)
+    def isDefinition(self):
+        return isinstance(self, DefinitionMarker)
 
-    def isDeclaration(self, what):
-        return isinstance(what, DeclarationMarker)
+    def isDeclaration(self):
+        return isinstance(self, DeclarationMarker)
 
-    def isAttribute(self, what):
-        return isinstance(what, AttributeMarker)
+    def isAttribute(self):
+        return isinstance(self, AttributeMarker)
 
-    def isAttributeGroup(self, what):
-        return isinstance(what, AttributeGroupMarker)
+    def isAttributeGroup(self):
+        return isinstance(self, AttributeGroupMarker)
 
-    def isReference(self, what):
-        return isinstance(what, ReferenceMarker)
+    def isReference(self):
+        return isinstance(self, ReferenceMarker)
 
-    def isWildCard(self, what):
-        return isinstance(what, WildCardMarker)
+    def isWildCard(self):
+        return isinstance(self, WildCardMarker)
 
-    def isModelGroup(self, what):
-        return isinstance(what, ModelGroupMarker)
+    def isModelGroup(self):
+        return isinstance(self, ModelGroupMarker)
 
-    def isExtension(self, what):
-        return isinstance(what, ExtensionMarker)
+    def isExtension(self):
+        return isinstance(self, ExtensionMarker)
 
-    def isRestriction(self, what):
-        return isinstance(what, RestrictionMarker)
+    def isRestriction(self):
+        return isinstance(self, RestrictionMarker)
 
-    def isSimple(self, what):
-        return isinstance(what, SimpleMarker)
+    def isSimple(self):
+        return isinstance(self, SimpleMarker)
 
-    def isComplex(self, what):
-        return isinstance(what, ComplexMarker)
+    def isComplex(self):
+        return isinstance(self, ComplexMarker)
 
 
 class Notation(XMLSchemaComponent):
@@ -931,6 +935,7 @@ class XMLSchema(XMLSchemaComponent):
         def __init__(self, parent):
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
+            self._schema = None
 
         def fromDom(self, node):
             self.setAttributes(node)
@@ -950,20 +955,25 @@ class XMLSchema(XMLSchemaComponent):
         def getSchema(self):
             """if schema is not defined, first look for a Schema class instance
                in parent Schema.  Else if not defined resolve schemaLocation
-               and create a new Schema class instance.  
+               and create a new Schema class instance, and keep a hard reference. 
             """
             if not self._schema:
-                schema = self._parent()._parent()
-                self._schema = schema.getImportSchemas()[self.attributes['namespace']]
-                if not self._schema:
-                    url = urllib.basejoin(schema.getBaseUrl(),\
+                schema = self._parent().getImportSchemas().get(self.attributes['namespace'])
+                if not schema and self._parent()._parent:
+                    schema = self._parent()._parent().getImportSchemas().get(self.attributes['namespace'])
+                if not schema:
+                    if not self.attributes.has_key('schemaLocation'):
+                        raise SchemaError, 'namespace(%s) is unknown'\
+                            %self.attributes['namespace']
+
+                    url = urllib.basejoin(self._parent().getBaseUrl(),\
                            self.attributes['schemaLocation'])
                     reader = SchemaReader()
-                    reader._imports = schema.getImportSchemas()
-                    reader._includes = schema.getIncludeSchemas()
+                    reader._imports = self._parent().getImportSchemas()
+                    reader._includes = self._parent().getIncludeSchemas()
                     self._schema = reader.readFromUrl(url)
                     self._schema.setBaseUrl(url)
-            return self._schema
+            return self._schema or schema
 
 
     class Include(XMLSchemaComponent):
