@@ -1016,7 +1016,7 @@ class XMLSchema(XMLSchemaComponent):
                 indx += 1
 
 
-    class Import(XMLSchemaComponent):
+    class Import(XMLSchemaComponent, MarkerInterface):
         """<import> 
            parent:
                schema
@@ -1076,7 +1076,7 @@ class XMLSchema(XMLSchemaComponent):
             return self._schema or schema
 
 
-    class Include(XMLSchemaComponent):
+    class Include(XMLSchemaComponent, MarkerInterface):
         """<include schemaLocation>
            parent:
                schema
