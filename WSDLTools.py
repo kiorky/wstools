@@ -202,7 +202,7 @@ class WSDL:
                     raise WSDLError(
                         'Missing type attribute for binding %s.' % name
                         )
-                type = type.split(':', 1)[-1]
+                type = ParseQName(type, element)
                 docs = GetDocumentation(element)
                 binding = self.addBinding(name, type, docs, targetNamespace)
                 operations = DOM.getElements(element, 'operation', NS_WSDL)
@@ -420,7 +420,7 @@ class PortType(Element):
                 name = DOM.getAttr(item, 'name')
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
-                message = msgref.split(':', 1)[-1]
+                message = ParseQName(msgref, item)
                 operation.setInput(message, name, docs)
 
             item = DOM.getElement(element, 'output', None, None)
@@ -428,14 +428,14 @@ class PortType(Element):
                 name = DOM.getAttr(item, 'name')
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
-                message = msgref.split(':', 1)[-1]
+                message = ParseQName(msgref, item)
                 operation.setOutput(message, name, docs)
 
             for item in DOM.getElements(element, 'fault', None):
                 name = DOM.getAttr(item, 'name')
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
-                message = msgref.split(':', 1)[-1]
+                message = ParseQName(msgref, item)
                 operation.addFault(message, name, docs)
 
 
@@ -740,7 +740,7 @@ class Service(Element):
                 raise WSDLError(
                     'Invalid port element.'
                     )
-            binding = binding.split(':', 1)[-1]
+            binding = ParseQName(binding, element)
             port = self.addPort(name, binding, docs)
             port.load_ex(GetExtensions(element))
 
