@@ -436,7 +436,7 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         """Returns a node trace up to the <schema> item.
         """
         item, path, name, ref = self, [], 'name', 'ref'
-        while isinstance(item, XMLSchema) is False:
+        while not isinstance(item,XMLSchema) and not isinstance(item,WSDLToolsAdapter):
             attr = item.getAttribute(name)
             if attr is None:
                 attr = item.getAttribute(ref)
@@ -612,7 +612,9 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             if (a not in (XMLSchemaComponent.xmlns, XMLNS.XML)) and\
                 (a not in self.__class__.attributes.keys()) and not\
                 (self.isAttribute() and self.isReference()):
-                raise SchemaError, '%s, unknown attribute' %a
+                if self.attributes.has_key(a):
+                    raise SchemaError, '%s, unknown namespaced(%s) attribute(s) %s' %(self.getItemTrace(), a,self.attributes[a])
+                raise SchemaError, '%s, unknown attribute %s' %(self.getItemTrace(), a)
 
 
 class WSDLToolsAdapter(XMLSchemaComponent):
