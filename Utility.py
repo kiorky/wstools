@@ -556,11 +556,11 @@ DOM = DOM()
 class Collection(UserDict):
     """Helper class for maintaining ordered named collections."""
     default = lambda k: k.name
-    def __init__(self, parent, key=Collection.default):
+    def __init__(self, parent, key=None):
         UserDict.__init__(self)
         self.parent = weakref.ref(parent)
         self.list = []
-        self._func = key
+        self._func = key or self.default
 
     def __getitem__(self, key):
         if type(key) is type(1):
