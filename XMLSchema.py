@@ -346,6 +346,11 @@ class ComplexMarker:
     """
     pass
 
+class LocalMarker: 
+    """marker for complex type information
+    """
+    pass
+
 
 class MarkerInterface:
     def isDefinition(self):
@@ -383,6 +388,9 @@ class MarkerInterface:
 
     def isComplex(self):
         return isinstance(self, ComplexMarker)
+
+    def isLocal(self):
+        return isinstance(self, LocalMarker)
 
 
 ##########################################################
@@ -1203,6 +1211,7 @@ class AttributeDeclaration(XMLSchemaComponent,\
 
 class LocalAttributeDeclaration(AttributeDeclaration,\
                                 AttributeMarker,\
+                                LocalMarker,\
                                 DeclarationMarker):
     """<attribute name>
        parent: 
@@ -1347,6 +1356,9 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
         self.attr_content = None
+
+    def getAttributeContent(self):
+        return self.attr_content
 
     def fromDom(self, node):
         self.setAttributes(node)
@@ -1637,7 +1649,8 @@ class ElementDeclaration(XMLSchemaComponent,\
         self.constraints = tuple(constraints)
 
 
-class LocalElementDeclaration(ElementDeclaration):
+class LocalElementDeclaration(ElementDeclaration,\
+                              LocalMarker):
     """<element>
        parents:
            all, choice, sequence
@@ -2039,6 +2052,9 @@ class ComplexType(XMLSchemaComponent,\
         self.content = None
         self.attr_content = None
 
+    def getAttributeContent(self):
+        return self.attr_content
+
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
@@ -2153,6 +2169,15 @@ class ComplexType(XMLSchemaComponent,\
                 'base':None }
             contents = {'xsd':['annotation', 'group', 'all', 'choice',\
                 'sequence', 'attribute', 'attributeGroup', 'anyAttribute']}
+
+            def __init__(self, parent):
+                XMLSchemaComponent.__init__(self, parent)
+                self.annotation = None
+                self.content = None
+                self.attr_content = None
+
+            def getAttributeContent(self):
+                return self.attr_content
 
             def fromDom(self, node):
                 self.setAttributes(node)
@@ -2276,6 +2301,9 @@ class ComplexType(XMLSchemaComponent,\
                 XMLSchemaComponent.__init__(self, parent)
                 self.annotation = None
                 self.attr_content = None
+ 
+            def getAttributeContent(self):
+                return self.attr_content
 
             def fromDom(self, node):
                 self.setAttributes(node)
@@ -2332,8 +2360,54 @@ class ComplexType(XMLSchemaComponent,\
             contents = {'xsd':['annotation', 'simpleType', 'attribute',\
                 'attributeGroup', 'anyAttribute'] + RestrictionMarker.facets}
 
+	    def __init__(self, parent):
+                XMLSchemaComponent.__init__(self, parent)
+                self.annotation = None
+                self.content = None
+                self.attr_content = None
+ 
+            def getAttributeContent(self):
+                return self.attr_content
 
-class LocalComplexType(ComplexType):
+            def fromDom(self, node):
+                self.content = []
+                self.setAttributes(node)
+                contents = self.getContents(node)
+
+                indx = 0
+                num = len(contents)
+                component = SplitQName(contents[indx].getTagName())[1]
+                if component == 'annotation':
+                    self.annotation = Annotation(self)
+                    self.annotation.fromDom(contents[indx])
+                    indx += 1
+                    component = SplitQName(contents[indx].getTagName())[1]
+
+                content = []
+                while indx < num:
+                    component = SplitQName(contents[indx].getTagName())[1]
+                    if component == 'attribute':
+                        if contents[indx].hasattr('ref'):
+                            content.append(AttributeReference(self))
+                        else:
+                            content.append(LocalAttributeDeclaration(self))
+                    elif component == 'attributeGroup':
+                        content.append(AttributeGroupReference(self))
+                    elif component == 'anyAttribute':
+                        content.append(AttributeWildCard(self))
+                    elif component == 'simpleType':
+                        self.content.append(LocalSimpleType(self))
+                        self.content[-1].fromDom(contents[indx])
+                    else:
+	                raise SchemaError, 'Unknown component (%s)'\
+                            %(contents[indx].getTagName())
+                    content[-1].fromDom(contents[indx])
+                    indx += 1
+                self.attr_content = tuple(content)
+
+
+class LocalComplexType(ComplexType,\
+                       LocalMarker):
     """<complexType>
        parents:
            element
@@ -2375,7 +2449,6 @@ class SimpleType(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
         self.content = None
-        self.attr_content = None
 
     def fromDom(self, node):
         self.setAttributes(node)
@@ -2422,13 +2495,11 @@ class SimpleType(XMLSchemaComponent,\
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
             self.content = None
-            self.attr_content = None
 
         def fromDom(self, node):
             self.setAttributes(node)
             contents = self.getContents(node)
             content = []
-            self.attr_content = []
 
             for indx in range(len(contents)):
                 component = SplitQName(contents[indx].getTagName())[1]
@@ -2461,17 +2532,16 @@ class SimpleType(XMLSchemaComponent,\
         attributes = {'id':None, 
             'memberTypes':None }
         contents = {'xsd':['annotation', 'simpleType']}
+
         def __init__(self, parent):
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
             self.content = None
-            self.attr_content = None
 
         def fromDom(self, node):
             self.setAttributes(node)
             contents = self.getContents(node)
             content = []
-            self.attr_content = []
 
             for indx in range(len(contents)):
                 component = SplitQName(contents[indx].getTagName())[1]
@@ -2503,13 +2573,11 @@ class SimpleType(XMLSchemaComponent,\
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
             self.content = None
-            self.attr_content = None
 
         def fromDom(self, node):
             self.setAttributes(node)
             contents = self.getContents(node)
             self.content = []
-            self.attr_content = []
 
             for indx in range(len(contents)):
                 component = SplitQName(contents[indx].getTagName())[1]
