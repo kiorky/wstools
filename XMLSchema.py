@@ -856,10 +856,10 @@ class XMLSchema(XMLSchemaComponent):
            schema -- schema instance
            _imported_schemas 
         """
-        if not isinstance(schema, Schema):
+        if not isinstance(schema, XMLSchema):
             raise TypeError, 'expecting a Schema instance'
         if schema.targetNamespace != self.targetNamespace:
-            self._imported_schemas[schema.targetNamespace]
+            self._imported_schemas[schema.targetNamespace] = schema
         else:
             raise SchemaError, 'import schema bad targetNamespace'
 
@@ -869,7 +869,7 @@ class XMLSchema(XMLSchemaComponent):
            schema -- schema instance
            _included_schemas 
         """
-        if not isinstance(schema, Schema):
+        if not isinstance(schema, XMLSchema):
             raise TypeError, 'expecting a Schema instance'
         if not schema.targetNamespace or\
              schema.targetNamespace == self.targetNamespace:
@@ -986,13 +986,19 @@ class XMLSchema(XMLSchemaComponent):
                 elif component == 'import':
                     tp = self.__class__.Import(self)
                     tp.fromDom(node)
-                    if tp.attributes['namespace']:
-                        if tp.attributes['namespace'] == self.targetNamespace:
+                    import_ns = tp.getAttribute('namespace')
+                    if import_ns:
+                        if import_ns == self.targetNamespace:
                             raise SchemaError,\
                                 'import and schema have same targetNamespace'
-                        self.imports[tp.attributes['namespace']] = tp
+                        self.imports[import_ns] = tp
                     else:
                         self.imports[self.__class__.empty_namespace] = tp
+
+                    if not self.getImportSchemas().has_key(import_ns) and\
+                       tp.getAttribute('schemaLocation'):
+                        self.addImportSchema(tp.getSchema())
+
                 elif component == 'redefine':
                     #print_debug('class %s, redefine skipped' %self.__class__, 5)
                     pass
