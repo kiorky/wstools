@@ -25,6 +25,7 @@ class WSDLReader:
         """Return a WSDL instance loaded from a file object."""
         document = DOM.loadDocument(file)
         wsdl = WSDL()
+        wsdl.location = file.name
         wsdl.load(document)
         return wsdl
 

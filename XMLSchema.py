@@ -283,7 +283,6 @@ class XMLSchemaComponent(XMLBase):
     xmlns_key = ''
     xmlns = 'xmlns'
     xml = 'xml'
-    #xsd = 'xsd'
 
     def __init__(self, parent=None):
         """parent -- parent instance
@@ -379,11 +378,18 @@ class XMLSchemaComponent(XMLBase):
             elif prefix:
                 ns = node.getNamespace(prefix)
                 if not ns: 
-                    raise 
-                if not ns or not self.attributes.has_key(ns):
+                    raise SchemaError, 'no namespace for attribute prefix %s'\
+                        %prefix
+                if not self.attributes.has_key(ns):
                     self.attributes[ns] = {}
-            else:
+                elif self.attributes[ns].has_key(value):
+                    raise SchemaError, 'attribute %s declared multiple times in %s'\
+                        %(value, ns)
+                self.attributes[ns][value] = v
+            elif not self.attributes.has_key(value):
                 self.attributes[value] = v
+            else:
+                raise SchemaError, 'attribute %s declared multiple times' %value
 
         self.__checkAttributes()
         self.__setAttributeDefaults()
@@ -409,7 +415,6 @@ class XMLSchemaComponent(XMLBase):
     def getContents(self, node):
         """retrieve xsd contents
         """
-        #return node.getContentList(*self.__class__.contents[XMLSchemaComponent.xsd])
         return node.getContentList(*self.__class__.contents['xsd'])
 
     def __setAttributeDefaults(self):
@@ -427,7 +432,8 @@ class XMLSchemaComponent(XMLBase):
     def __checkAttributes(self):
         """Checks that required attributes have been defined,
            attributes w/default cannot be required.   Checks
-           all defined attributes are legal.
+           all defined attributes are legal, attribute 
+           references are not subject to this test.
         """
         for a in self.__class__.required:
             if not self.attributes.has_key(a):
@@ -437,7 +443,8 @@ class XMLSchemaComponent(XMLBase):
 
         for a in self.attributes.keys():
             if (a != XMLSchemaComponent.xmlns) and\
-                 a not in self.__class__.attributes.keys():
+                (a not in self.__class__.attributes.keys()) and not\
+                (self.isAttribute() and self.isReference()):
                 raise SchemaError, '%s, unknown attribute' %a
 
 
@@ -447,7 +454,8 @@ class WSDLToolsAdapter(XMLSchemaComponent):
     attributes = {'name':None, 'targetNamespace':None}
 
     def __init__(self, wsdl):
-        XMLSchemaComponent.__init__(self, None)
+        #XMLSchemaComponent.__init__(self, None)
+        XMLSchemaComponent.__init__(self, parent=wsdl)
         self.setAttributes(DOMAdapter(wsdl.document))
 
     def getImportSchemas(self):
@@ -895,7 +903,7 @@ class XMLSchema(XMLSchemaComponent):
                 if component == 'include':
                     tp = self.__class__.Include(self)
                     tp.fromDom(node)
-                    self.includes[tp.attributes[XMLSchemaComponent.xsd]['schemaLocation']] = tp
+                    self.includes[tp.attributes['schemaLocation']] = tp
 
                     schema = tp.getSchema()
                     if schema.targetNamespace and \
@@ -911,11 +919,11 @@ class XMLSchema(XMLSchemaComponent):
                 elif component == 'import':
                     tp = self.__class__.Import(self)
                     tp.fromDom(node)
-                    if tp.attributes[XMLSchemaComponent.xsd]['namespace']:
-                        if tp.attributes[XMLSchemaComponent.xsd]['namespace'] == self.targetNamespace:
+                    if tp.attributes['namespace']:
+                        if tp.attributes['namespace'] == self.targetNamespace:
                             raise SchemaError,\
                                 'import and schema have same targetNamespace'
-                        self.imports[tp.attributes[XMLSchemaComponent.xsd]['namespace']] = tp
+                        self.imports[tp.attributes['namespace']] = tp
                     else:
                         self.imports[self.__class__.empty_namespace] = tp
                 elif component == 'redefine':
@@ -1078,10 +1086,10 @@ class XMLSchema(XMLSchemaComponent):
             if not self._schema:
                 schema = self._parent()._parent()
                 self._schema = schema.getIncludeSchemas(\
-                    self.attributes[XMLSchemaComponent.xsd]['schemaLocation'])
+                    self.attributes['schemaLocation'])
                 if not self._schema:
                     url = BaseUriResolver().normalize(\
-                       self.attributes[XMLSchemaComponent.xsd]['schemaLocation'], schema.getBaseUrl())
+                       self.attributes['schemaLocation'], schema.getBaseUrl())
                     reader = SchemaReader()
                     reader._imports = schema.getImportSchemas()
                     reader._includes = schema.getIncludeSchemas()
