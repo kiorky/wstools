@@ -7,7 +7,7 @@
 
 import unittest, sys, copy
 from ConfigParser import NoOptionError
-from pyGridWare.test import utils
+import utils
 from ZSI.wstools.WSDLTools  import WSDLReader
 
 
