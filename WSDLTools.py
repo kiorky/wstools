@@ -10,7 +10,7 @@
 ident = "$Id$"
 
 from Utility import DOM, Collection
-from XMLSchema import XMLSchema
+from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 from StringIO import StringIO
 import urllib
 
@@ -151,12 +151,15 @@ class WSDL:
                 location = DOM.getAttr(element, 'location')
                 imported[location] = 1
 
+        reader = SchemaReader()
         for element in DOM.getElements(definitions, None, None):
             localName = element.localName
 
             if not DOM.nsUriMatch(element.namespaceURI, NS_WSDL):
                 if localName == 'schema':
-                    self.types.addSchema(XMLSchema(element))
+                    self.types.addSchema(
+                        reader.loadFromNode(WSDLToolsAdapter(self), element)
+                        )
                 else:
                     self.extensions.append(element)
                 continue
@@ -205,7 +208,9 @@ class WSDL:
                 self.types.documentation = GetDocumentation(element)
                 for item in DOM.getElements(element, None, None):
                     if item.localName == 'schema':
-                        self.types.addSchema(XMLSchema(item))
+                        self.types.addSchema(
+                            reader.loadFromNode(WSDLToolsAdapter(self), item)
+                            )
                     else:
                         self.types.addExtension(item)
                 continue
