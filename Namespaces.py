@@ -67,16 +67,26 @@ except:
         WRAP_AES256    = "http://www.w3.org/2001/04/xmlenc#kw-aes256"
 
 
+class OASIS:
+    '''URLs for Oasis specifications
+    '''
+    WSSE    = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+
+
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
+
 
 class WSU:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/utility"
     UTILITY = "http://schemas.xmlsoap.org/ws/2002/07/utility"
 
+
 class WSR:
     PROPERTIES = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ResourceProperties"
     LIFETIME   = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ResourceLifetime"
+
 
 class WSA:
     ADDRESS    = "http://schemas.xmlsoap.org/ws/2003/03/addressing"
@@ -84,6 +94,7 @@ class WSA:
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
     ANONYMOUS2004  = "%s/role/anonymous" %ADDRESS2004
     FAULT      = "http://schemas.xmlsoap.org/ws/2004/03/addressing/fault"
+
 
 class WSP:
     POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
