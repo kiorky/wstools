@@ -11,6 +11,7 @@ ident = "$Id$"
 
 import types
 import string, httplib, smtplib, urllib, socket, weakref
+from os.path import isfile
 from string import join, strip, split
 from UserDict import UserDict
 from cStringIO import StringIO
@@ -119,6 +120,7 @@ def urlopen(url, timeout=20, redirects=None):
     """A minimal urlopen replacement hack that supports timeouts for http.
        Note that this supports GET only."""
     scheme, host, path, params, query, frag = urlparse(url)
+
     if not scheme in ('http', 'https'):
         return urllib.urlopen(url)
     if params: path = '%s;%s' % (path, params)
@@ -601,7 +603,11 @@ class DOM:
 
     def loadFromURL(self, url):
         """Load an xml file from a URL and return a DOM document."""
-        file = urlopen(url)
+        if isfile(url) is True:
+            file = open(url, 'r')
+        else:
+            file = urlopen(url)
+
         try:     
             result = self.loadDocument(file)
         except Exception, ex:
