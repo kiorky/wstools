@@ -20,6 +20,16 @@ from Namespaces import XMLNS
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
 
+# 
+# Collections in XMLSchema class
+# 
+TYPES = 'types'
+ATTRIBUTE_GROUPS = 'attr_groups'
+ATTRIBUTES = 'attr_decl'
+ELEMENTS = 'elements'
+MODEL_GROUPS = 'model_groups'
+
+
 def GetSchema(component):
     """convience function for finding the parent XMLSchema instance.
     """
@@ -519,31 +529,31 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         """attribute -- attribute with a QName value (eg. type).
            collection -- check types collection in parent Schema instance
         """
-        return self.getQNameAttribute('attr_decl', attribute)
+        return self.getQNameAttribute(ATTRIBUTES, attribute)
 
     def getAttributeGroup(self, attribute):
         """attribute -- attribute with a QName value (eg. type).
            collection -- check types collection in parent Schema instance
         """
-        return self.getQNameAttribute('attr_groups', attribute)
+        return self.getQNameAttribute(ATTRIBUTE_GROUPS, attribute)
 
     def getTypeDefinition(self, attribute):
         """attribute -- attribute with a QName value (eg. type).
            collection -- check types collection in parent Schema instance
         """
-        return self.getQNameAttribute('types', attribute)
+        return self.getQNameAttribute(TYPES, attribute)
 
     def getElementDeclaration(self, attribute):
         """attribute -- attribute with a QName value (eg. element).
            collection -- check elements collection in parent Schema instance.
         """
-        return self.getQNameAttribute('elements', attribute)
+        return self.getQNameAttribute(ELEMENTS, attribute)
 
     def getModelGroup(self, attribute):
         """attribute -- attribute with a QName value (eg. ref).
            collection -- check model_group collection in parent Schema instance.
         """
-        return self.getQNameAttribute('model_groups', attribute)
+        return self.getQNameAttribute(MODEL_GROUPS, attribute)
 
     def getQNameAttribute(self, collection, attribute):
         """returns object instance representing QName --> (namespace,name),
@@ -552,25 +562,35 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
            collection -- collection in parent Schema instance to search.
         """
         obj = None
-        tdc = self.attributes.get(attribute)
+        #tdc = self.attributes.get(attribute)
+        tdc = self.getAttributeQName(attribute)
         if tdc:
-            parent = GetSchema(self)
-            targetNamespace = tdc.getTargetNamespace()
-            if parent.targetNamespace == targetNamespace:
-                item = tdc.getName()
-                try:
-                    obj = getattr(parent, collection)[item]
-                except KeyError, ex:
-                    raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
-                        %(targetNamespace, collection, item)
-            elif parent.imports.has_key(targetNamespace):
-                schema = parent.imports[targetNamespace].getSchema()
-                item = tdc.getName()
-                try:
-                    obj = getattr(schema, collection)[item]
-                except KeyError, ex:
-                    raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
-                        %(targetNamespace, collection, item)
+            obj = self.getSchemaItem(collection, tdc.getTargetNamespace(), tdc.getName())
+
+        return obj
+
+    def getSchemaItem(self, collection, namespace, name):
+        """returns object instance representing namespace, name,
+           or if does not exist return None.
+           namespace -- namespace item defined in.
+           name -- name of item.
+           collection -- collection in parent Schema instance to search.
+        """
+        obj = None
+        parent = GetSchema(self)
+        if parent.targetNamespace == namespace:
+            try:
+                obj = getattr(parent, collection)[name]
+            except KeyError, ex:
+                raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
+                    %(namespace, collection, name)
+        elif parent.imports.has_key(namespace):
+            schema = parent.imports[namespace].getSchema()
+            try:
+                obj = getattr(schema, collection)[name]
+            except KeyError, ex:
+                raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
+                    %(namespace, collection, name)
         return obj
 
     def getXMLNS(self, prefix=None):
@@ -608,10 +628,12 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         qname = self.getAttribute(attribute)
         if isinstance(qname, TypeDescriptionComponent) is True:
             return qname
+        if qname is None:
+            return None
 
         prefix,ncname = SplitQName(qname)
         namespace = self.getXMLNS(prefix)
-        return (namespace,ncname)
+        return TypeDescriptionComponent((namespace,ncname))
 
     def getAttributeName(self):
         """return attribute name or None
@@ -1538,7 +1560,7 @@ class AttributeGroupReference(XMLSchemaComponent,\
         """attribute -- attribute with a QName value (eg. type).
            collection -- check types collection in parent Schema instance
         """
-        return XMLSchemaComponent.getQNameAttribute(self, 'attr_groups', attribute)
+        return XMLSchemaComponent.getAttributeGroup(self, attribute)
 
     def fromDom(self, node):
         self.setAttributes(node)
