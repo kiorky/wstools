@@ -400,7 +400,7 @@ class DOM:
                 if item[1] == name:
                     return 1
             return 0
-        return node.attrsNS.has_key((nsuri, name))
+        return node._attrsNS.has_key((nsuri, name))
 
     def getAttr(self, node, name, nsuri=None, default=join):
         """Return the value of the attribute named 'name' with the
