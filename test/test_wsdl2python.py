@@ -49,26 +49,33 @@ class Wsdl2pythonTest(unittest.TestCase):
             raise
         codegen = wsdl2python.WriteServiceModule(wsdl)
         f_types, f_services = codegen.get_module_names()
+        hasSchema = len(codegen._wa.getSchemaDict())
 
-        strFile = StringIO.StringIO()
-        self.testdiff.setDiffFile(f_types + ".py")
-        try:
-            codegen.write_service_types(f_types, strFile)
-        except:
-            self.path = self.path + ": write_service_types"
-            raise
-        self.testdiff.failUnlessEqual(strFile)
-        strFile.close()
+        if hasSchema:
+            strFile = StringIO.StringIO()
+            self.testdiff.setDiffFile(f_types + ".py")
+            try:
+                codegen.write_service_types(f_types, strFile)
+            except:
+                self.path = self.path + ": write_service_types"
+                raise
+            if strFile.closed:
+                print "trouble"
+            self.testdiff.failUnlessEqual(strFile)
+            strFile.close()
 
         strFile = StringIO.StringIO()
         self.testdiff.setDiffFile(f_services + ".py")
         try:
-            codegen.write_services(f_types, f_services, strFile)
+            signatures = codegen.write_services(f_types,
+                             f_services, strFile, hasSchema)
         except:
             self.path = self.path + ": write_services"
             raise
         self.testdiff.failUnlessEqual(strFile)
         strFile.close()
+
+
 
 def makeTestSuite(section=None):
     global configLoader
@@ -85,9 +92,9 @@ def makeTestSuite(section=None):
     return suite
 
 
-def main():
+def foo():
     loader = utils.MatchTestLoader(False, "config.py", "makeTestSuite")
     unittest.main(defaultTest="makeTestSuite", testLoader=loader)
                   
 
-if __name__ == "__main__" : main()
+if __name__ == "__main__" : foo()
