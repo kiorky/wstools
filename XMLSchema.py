@@ -135,6 +135,7 @@ class SchemaReader:
 class SchemaError(Exception): 
     pass
 
+
 ###########################
 # DOM Utility Adapters 
 ##########################
@@ -585,13 +586,32 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             ns = parent.attributes[XMLSchemaComponent.xmlns].get(prefix or\
                     XMLSchemaComponent.xmlns_key)
             if not ns and isinstance(parent, WSDLToolsAdapter):
+                if prefix is None:
+                    return ''
                 raise SchemaError, 'unknown prefix %s' %prefix
         return ns
 
     def getAttribute(self, attribute):
-        """return requested attribute or None
+        """return requested attribute value or None
         """
+        if type(attribute) in (list, tuple):
+             if len(attribute) != 2:
+                raise LookupError, 'To access attributes must use name or (namespace,name)'
+
+             return self.attributes.get(attribute[0]).get(attribute[1])
+
         return self.attributes.get(attribute)
+
+    def getAttributeQName(self, attribute):
+        """return requested attribute value as (namespace,name) or None 
+        """
+        qname = self.getAttribute(attribute)
+        if isinstance(qname, TypeDescriptionComponent) is True:
+            return qname
+
+        prefix,ncname = SplitQName(qname)
+        namespace = self.getXMLNS(prefix)
+        return (namespace,ncname)
 
     def getAttributeName(self):
         """return attribute name or None
@@ -665,7 +685,7 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
            it must be defined as an instance variable.
         """
         for k,v in self.__class__.attributes.items():
-            if v and not self.attributes.has_key(k):
+            if v is not None and self.attributes.has_key(k) is False:
                 if isinstance(v, types.FunctionType):
                     self.attributes[k] = v(self)
                 else:
@@ -2239,6 +2259,19 @@ class ComplexType(XMLSchemaComponent,\
         self.content = None
         self.attr_content = None
 
+    def isMixed(self):
+        m = self.getAttribute('mixed')
+        if m == 0 or m == False:
+            return False
+        if isinstance(m, basestring) is True:
+            if m in ('false', '0'):
+                return False
+            if m in ('true', '1'):
+                return True
+
+        raise SchemaError, 'invalid value for attribute mixed(%s): %s'\
+            %(m, self.getItemTrace())
+
     def getAttributeContent(self):
         return self.attr_content
 
@@ -2307,7 +2340,9 @@ class ComplexType(XMLSchemaComponent,\
 	def __init__(self, parent):
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
+            # XXX remove attribute derivation, inconsistent
             self.derivation = None
+            self.content = None
 
         def fromDom(self, node):
             self.setAttributes(node)
@@ -2329,6 +2364,7 @@ class ComplexType(XMLSchemaComponent,\
                 else:
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
                 self.derivation.fromDom(i)
+            self.content = self.derivation
 
     class ComplexContent(_DerivedType,\
                          ComplexMarker):
@@ -2343,9 +2379,21 @@ class ComplexType(XMLSchemaComponent,\
                annotation?, (restriction | extension)
         """
         attributes = {'id':None, 
-            'mixed':0 }
+            'mixed':0}
         contents = {'xsd':['annotation', 'restriction', 'extension']}
         tag = 'complexContent'
+
+        def isMixed(self):
+            m = self.getAttribute('mixed')
+            if m == 0 or m == False:
+                return False
+            if isinstance(m, basestring) is True:
+                if m in ('false', '0'):
+                    return False
+                if m in ('true', '1'):
+                    return True
+            raise SchemaError, 'invalid value for attribute mixed(%s): %s'\
+                %(m, self.getItemTrace())
 
         class _DerivationBase(XMLSchemaComponent):
             """<extension>,<restriction>
