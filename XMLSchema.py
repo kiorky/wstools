@@ -671,9 +671,8 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             if (a not in (XMLSchemaComponent.xmlns, XMLNS.XML)) and\
                 (a not in self.__class__.attributes.keys()) and not\
                 (self.isAttribute() and self.isReference()):
-                if self.attributes.has_key(a):
-                    raise SchemaError, '%s, unknown namespaced(%s) attribute(s) %s' %(self.getItemTrace(), a,self.attributes[a])
-                raise SchemaError, '%s, unknown attribute %s' %(self.getItemTrace(), a)
+                raise SchemaError, '%s, unknown attribute(%s,%s)' \
+                    %(self.getItemTrace(), a, self.attributes[a])
 
 
 class WSDLToolsAdapter(XMLSchemaComponent):
