@@ -4,6 +4,8 @@
 
 try:
     from xml.ns import SOAP, SCHEMA, WSDL, XMLNS, DSIG, ENCRYPTION
+    DSIG.C14N       = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
+    
 except:
     class SOAP:
         ENV         = "http://schemas.xmlsoap.org/soap/envelope/"
@@ -34,7 +36,7 @@ except:
 
     class DSIG:
         BASE         = "http://www.w3.org/2000/09/xmldsig#"
-        C14N         = "http://www.w3.org/TR/2000/CR-xml-c14n-20010315"
+        C14N         = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
         C14N_COMM    = "http://www.w3.org/TR/2000/CR-xml-c14n-20010315#WithComments"
         C14N_EXCL    = "http://www.w3.org/2001/10/xml-exc-c14n#"
         DIGEST_MD2   = "http://www.w3.org/2000/09/xmldsig#md2"
@@ -106,3 +108,4 @@ class BEA:
 class GLOBUS:
     SECCONV = "http://wsrf.globus.org/core/2004/07/security/secconv"
     CORE    = "http://www.globus.org/namespaces/2004/06/core"
+    SIG     = "http://www.globus.org/2002/04/xmlenc#gssapi-sign"
