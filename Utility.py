@@ -54,10 +54,6 @@ class TimeoutHTTPS(HTTPSConnection):
        bypassed for send and recv calls. Since our hack _is_ in place at
        connect() time, it should at least provide some timeout protection."""
     def __init__(self, host, port=None, timeout=20, **kwargs):
-        if not hasattr(socket, 'ssl'):
-            raise ValueError(
-                'This Python installation does not have SSL support.'
-                )
         HTTPSConnection.__init__(self, str(host), port, **kwargs)
         self.timeout = timeout
 
@@ -79,10 +75,6 @@ def urlopen(url, timeout=20, redirects=None):
     if frag:   path = '%s#%s' % (path, frag)
 
     if scheme == 'https':
-        if not hasattr(socket, 'ssl'):
-            raise ValueError(
-                'This Python installation does not have SSL support.'
-                )
         conn = TimeoutHTTPS(host, None, timeout)
     else:
         conn = TimeoutHTTP(host, None, timeout)
