@@ -439,6 +439,9 @@ class PortType(Element):
     def getWSDL(self):
         return self.parent().parent()
 
+    def getTargetNamespace(self):
+        return self.targetNamespace or self.getWSDL().targetNamespace
+
     def getResourceProperties(self):
         return self.resourceProperties
 
@@ -450,6 +453,8 @@ class PortType(Element):
     def load(self, element):
         self.name = DOM.getAttr(element, 'name')
         self.documentation = GetDocumentation(element)
+        self.targetNamespace = DOM.getAttr(element, 'targetNamespace')
+        print "PORTYPE TNS: ", self.targetNamespace
 
         if DOM.hasAttr(element, 'ResourceProperties', WSR.PROPERTIES):
             rpref = DOM.getAttr(element, 'ResourceProperties', WSR.PROPERTIES)
@@ -1055,7 +1060,7 @@ def GetWSAActionInput(operation):
     if attr is not None:
         return attr
     portType = operation.getPortType()
-    targetNamespace = portType.getWSDL().targetNamespace
+    targetNamespace = portType.getTargetNamespace()
     ptName = portType.name
     msgName = operation.input.name
     if not msgName:
@@ -1069,7 +1074,7 @@ def GetWSAActionOutput(operation):
     attr = operation.output.action
     if attr is not None:
         return attr
-    targetNamespace = operation.getPortType().getWSDL().targetNamespace
+    targetNamespace = operation.getPortType().getTargetNamespace()
     ptName = operation.getPortType().name
     msgName = operation.output.name
     if not msgName:

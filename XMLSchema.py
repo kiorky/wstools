@@ -332,6 +332,21 @@ class ModelGroupMarker:
     """
     pass
 
+class AllMarker(ModelGroupMarker): 
+    """marker for all model group
+    """
+    pass
+
+class ChoiceMarker(ModelGroupMarker): 
+    """marker for choice model group
+    """
+    pass
+
+class SequenceMarker(ModelGroupMarker): 
+    """marker for sequence model group
+    """
+    pass
+
 class ExtensionMarker: 
     """marker for extensions
     """
@@ -348,6 +363,17 @@ class SimpleMarker:
     """marker for simple type information
     """
     pass
+
+class ListMarker: 
+    """marker for simple type list
+    """
+    pass
+
+class UnionMarker: 
+    """marker for simple type Union
+    """
+    pass
+
 
 class ComplexMarker: 
     """marker for complex type information
@@ -385,6 +411,15 @@ class MarkerInterface:
     def isModelGroup(self):
         return isinstance(self, ModelGroupMarker)
 
+    def isAll(self):
+        return isinstance(self, AllMarker)
+
+    def isChoice(self):
+        return isinstance(self, ChoiceMarker)
+
+    def isSequence(self):
+        return isinstance(self, SequenceMarker)
+
     def isExtension(self):
         return isinstance(self, ExtensionMarker)
 
@@ -399,6 +434,12 @@ class MarkerInterface:
 
     def isLocal(self):
         return isinstance(self, LocalMarker)
+
+    def isList(self):
+        return isinstance(self, ListMarker)
+
+    def isUnion(self):
+        return isinstance(self, UnionMarker)
 
 
 ##########################################################
@@ -470,6 +511,18 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             parent = parent._parent()
             tns = parent.attributes.get(targetNamespace)
         return tns
+
+    def getAttributeDeclaration(self, attribute):
+        """attribute -- attribute with a QName value (eg. type).
+           collection -- check types collection in parent Schema instance
+        """
+        return self.getQNameAttribute('attr_decl', attribute)
+
+    def getAttributeGroup(self, attribute):
+        """attribute -- attribute with a QName value (eg. type).
+           collection -- check types collection in parent Schema instance
+        """
+        return self.getQNameAttribute('attr_groups', attribute)
 
     def getTypeDefinition(self, attribute):
         """attribute -- attribute with a QName value (eg. type).
@@ -1114,7 +1167,10 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
             contents = self.getContents(node)
 
-            if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
+            print "PARENT: ", self._parent()
+            print "\ttns: ", self.getTargetNamespace()
+            #if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
+            if self.attributes['namespace'] == self.getTargetNamespace():
                 raise SchemaError, 'namespace of schema and import match'
 
             for i in contents:
@@ -1361,6 +1417,9 @@ class AttributeReference(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
 
+    def getAttributeDeclaration(self, attribute='ref'):
+        return XMLSchemaComponent.getAttributeDeclaration(self, attribute)
+
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
@@ -1389,7 +1448,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
     required = ['name']
     attributes = {'id':None, 
         'name':None}
-    contents = {'xsd':['annotation']}
+    contents = {'xsd':['annotation', 'attribute', 'attributeGroup', 'anyAttribute']}
     tag = 'attributeGroup'
 
     def __init__(self, parent):
@@ -1410,19 +1469,21 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
             if (component == 'annotation') and (not indx):
                 self.annotation = Annotation(self)
                 self.annotation.fromDom(contents[indx])
-            elif (component == 'attribute'):
+            elif component == 'attribute':
                 if contents[indx].hasattr('name'):
-                    content.append(AttributeDeclaration())
+                    content.append(AttributeDeclaration(self))
                 elif contents[indx].hasattr('ref'):
-                    content.append(AttributeReference())
+                    content.append(AttributeReference(self))
                 else:
                     raise SchemaError, 'Unknown attribute type'
                 content[-1].fromDom(contents[indx])
-            elif (component == 'attributeGroup'):
-                content.append(AttributeGroupReference())
+            elif component == 'attributeGroup':
+                content.append(AttributeGroupReference(self))
                 content[-1].fromDom(contents[indx])
-            elif (component == 'anyAttribute') and (len(contents) == x+1):
-                content.append(AttributeWildCard())
+            elif component == 'anyAttribute':
+                if len(contents) != indx+1: 
+                    raise SchemaError, 'anyAttribute is out of order in %s' %self.getItemTrace()
+                content.append(AttributeWildCard(self))
                 content[-1].fromDom(contents[indx])
             else:
                 raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
@@ -1450,6 +1511,12 @@ class AttributeGroupReference(XMLSchemaComponent,\
     def __init__(self, parent):
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
+
+    def getAttributeGroup(self, attribute='ref'):
+        """attribute -- attribute with a QName value (eg. type).
+           collection -- check types collection in parent Schema instance
+        """
+        return XMLSchemaComponent.getQNameAttribute(self, 'attr_groups', attribute)
 
     def fromDom(self, node):
         self.setAttributes(node)
@@ -1849,7 +1916,7 @@ class ElementWildCard(LocalElementDeclaration,\
 # Model Groups
 #####################################################
 class Sequence(XMLSchemaComponent,\
-               ModelGroupMarker):
+               SequenceMarker):
     """<sequence>
        parents: 
            complexType, extension, restriction, group, choice, sequence
@@ -1907,7 +1974,7 @@ class Sequence(XMLSchemaComponent,\
 
 
 class All(XMLSchemaComponent,\
-          ModelGroupMarker):
+          AllMarker):
     """<all>
        parents: 
            complexType, extension, restriction, group
@@ -1956,7 +2023,7 @@ class All(XMLSchemaComponent,\
 
 
 class Choice(XMLSchemaComponent,\
-             ModelGroupMarker):
+             ChoiceMarker):
     """<choice>
        parents: 
            complexType, extension, restriction, group, choice, sequence
@@ -2626,7 +2693,8 @@ class SimpleType(XMLSchemaComponent,\
             self.content = tuple(content)
 
 
-    class Union(XMLSchemaComponent):
+    class Union(XMLSchemaComponent,
+                UnionMarker):
         """<union>
            parents:
                simpleType
@@ -2664,7 +2732,8 @@ class SimpleType(XMLSchemaComponent,\
                     raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
             self.content = tuple(content)
 
-    class List(XMLSchemaComponent):
+    class List(XMLSchemaComponent, 
+               ListMarker):
         """<list>
            parents:
                simpleType
@@ -2685,11 +2754,22 @@ class SimpleType(XMLSchemaComponent,\
             self.annotation = None
             self.content = None
 
+        def getItemType(self):
+            return self.attributes.get('itemType')
+
+        def getTypeDefinition(self, attribute='itemType'):
+            '''return the type refered to by itemType attribute or
+            the simpleType content.  If returns None, then the 
+            type refered to by itemType is primitive.
+            '''
+            tp = XMLSchemaComponent.getTypeDefinition(self, attribute)
+            return tp or self.content
+
         def fromDom(self, node):
+            self.annotation = None
+            self.content = None
             self.setAttributes(node)
             contents = self.getContents(node)
-            self.content = []
-
             for indx in range(len(contents)):
                 component = SplitQName(contents[indx].getTagName())[1]
                 if (component == 'annotation') and (not indx):
