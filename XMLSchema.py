@@ -622,7 +622,6 @@ class WSDLToolsAdapter(XMLSchemaComponent):
     tag = 'definitions'
 
     def __init__(self, wsdl):
-        #XMLSchemaComponent.__init__(self, None)
         XMLSchemaComponent.__init__(self, parent=wsdl)
         self.setAttributes(DOMAdapter(wsdl.document))
 
@@ -1652,13 +1651,34 @@ class ElementDeclaration(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
         self.content = None
-        self.constraints = None
+        self.constraints = ()
+
+    def getElementDeclaration(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
+
+    def getTypeDefinition(self, attribute=None):
+        '''If attribute is None, "type" is assumed, return the corresponding
+        representation of the global type definition (TypeDefinition),
+        or the local definition if don't find "type".  To maintain backwards
+        compat, if attribute is provided call base class method.
+        '''
+        if attribute:
+            return XMLSchemaComponent.getTypeDefinition(self, attribute)
+        gt = XMLSchemaComponent.getTypeDefinition(self, 'type')
+        if gt:
+            return gt
+        return self.content
+
+    def getConstraints(self):
+        return self._constraints
+    def setConstraints(self, constraints):
+        self._constraints = tuple(constraints)
+    constraints = property(getConstraints, setConstraints, None, "tuple of key, keyref, unique constraints")
 
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
         constraints = []
-
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
@@ -1684,7 +1704,8 @@ class ElementDeclaration(XMLSchemaComponent,\
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
             else:
 	        raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
-        self.constraints = tuple(constraints)
+
+        self.constraints = constraints
 
 
 class LocalElementDeclaration(ElementDeclaration,\
@@ -1747,6 +1768,15 @@ class ElementReference(XMLSchemaComponent,\
     def __init__(self, parent):
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
+
+    def getElementDeclaration(self, attribute=None):
+        '''If attribute is None, "ref" is assumed, return the corresponding
+        representation of the global element declaration (ElementDeclaration),
+        To maintain backwards compat, if attribute is provided call base class method.
+        '''
+        if attribute:
+            return XMLSchemaComponent.getElementDeclaration(self, attribute)
+        return XMLSchemaComponent.getElementDeclaration(self, 'ref')
  
     def fromDom(self, node):
         self.annotation = None
@@ -1788,6 +1818,9 @@ class ElementWildCard(LocalElementDeclaration,\
     def __init__(self, parent):
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
+
+    def getTypeDefinition(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
 
     def fromDom(self, node):
         self.annotation = None
@@ -2100,6 +2133,12 @@ class ComplexType(XMLSchemaComponent,\
 
     def getAttributeContent(self):
         return self.attr_content
+
+    def getElementDeclaration(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
+
+    def getTypeDefinition(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
 
     def fromDom(self, node):
         self.setAttributes(node)
@@ -2501,6 +2540,12 @@ class SimpleType(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
         self.content = None
+
+    def getElementDeclaration(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
+
+    def getTypeDefinition(self, attribute):
+        raise Warning, 'invalid operation for <%s>' %self.tag
 
     def fromDom(self, node):
         self.setAttributes(node)
