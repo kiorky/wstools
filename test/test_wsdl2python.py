@@ -5,9 +5,8 @@
 import sys, ConfigParser, unittest
 import StringIO
 from ZSI import wsdl2python
-#from pyGridWare import wsdl2python
 from ZSI.wstools.WSDLTools import WSDLReader
-from pyGridWare.test import utils
+import utils
 
 """
 Unittest for the wsdl2python class
