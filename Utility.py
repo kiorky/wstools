@@ -325,7 +325,7 @@ class DOM:
     def isElement(self, node, name, nsuri=None):
         """Return true if the given node is an element with the given
            name and optional namespace uri."""
-        if node.nodeType == node.ELEMENT_NODE:
+        if node.nodeType != node.ELEMENT_NODE:
             return 0
         return node.localName == name and \
                (nsuri is None or self.nsUriMatch(node.namespaceURI, nsuri))
