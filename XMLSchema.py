@@ -527,7 +527,7 @@ class Notation(XMLSchemaComponent):
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component == 'annotation' and not self.annotation:
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -548,8 +548,8 @@ class Annotation(XMLSchemaComponent):
     attributes = {'id':None}
     contents = {'xsd':('documentation', 'appinfo')}
 
-    def __init__(self):
-        XMLSchemaComponent.__init__(self)
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
         self.content = None
 
     def fromDom(self, node):
@@ -916,7 +916,7 @@ class XMLSchema(XMLSchemaComponent):
             for i in contents:
                 component = SplitQName(i.getTagName())[1]
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                 else:
                     raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -967,7 +967,7 @@ class XMLSchema(XMLSchemaComponent):
             for i in contents:
                 component = SplitQName(i.getTagName())[1]
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                 else:
                     raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1120,7 +1120,7 @@ class AttributeWildCard(XMLSchemaComponent,\
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component == 'annotation' and not self.annotation:
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1161,7 +1161,7 @@ class AttributeReference(XMLSchemaComponent,\
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component == 'annotation' and not self.annotation:
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1196,7 +1196,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component == 'annotation' and not self.annotation:
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1231,7 +1231,7 @@ class AttributeGroupReference(XMLSchemaComponent,\
         for i in contents:
             component = SplitQName(i.getTagName())[1]
             if component == 'annotation' and not self.annotation:
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(i)
             else:
                 raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1264,14 +1264,14 @@ class IdentityConstrants(XMLSchemaComponent):
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                 elif component == 'selector':
-                    self.selector = self.Selector()
+                    self.selector = self.Selector(self)
                     self.selector.fromDom(i)
                     continue
                 elif component == 'field':
-                    fields.append(self.Field())
+                    fields.append(self.Field(self))
                     fields[-1].fromDom(i)
                     continue
                 else:
@@ -1282,8 +1282,8 @@ class IdentityConstrants(XMLSchemaComponent):
 
 
     class Constraint(XMLSchemaComponent):
-        def __init__(self):
-            XMLSchemaComponent.__init__(self)
+        def __init__(self, parent):
+            XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
 
         def fromDom(node):
@@ -1294,7 +1294,7 @@ class IdentityConstrants(XMLSchemaComponent):
                 component = SplitQName(i.getTagName())[1]
                 if component in self.__class__.contents['xsd']:
                     if component == 'annotation' and not self.annotation:
-                        self.annotation = Annotation()
+                        self.annotation = Annotation(self)
                         self.annotation.fromDom(i)
                     else:
                         raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1587,7 +1587,7 @@ class Sequence(XMLSchemaComponent,\
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                     continue
                 elif component == 'element':
@@ -1644,14 +1644,14 @@ class All(XMLSchemaComponent,\
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                     continue
                 elif component == 'element':
                     if i.hasattr('ref'):
-	                content.append(ElementReference())
+	                content.append(ElementReference(self))
                     else:
-	                content.append(LocalElementDeclaration())
+	                content.append(LocalElementDeclaration(self))
                 else:
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
                 content[-1].fromDom(i)
@@ -1694,22 +1694,22 @@ class Choice(XMLSchemaComponent,\
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                     continue
                 elif component == 'element':
                     if i.hasattr('ref'):
-	                content.append(ElementReference())
+	                content.append(ElementReference(self))
                     else:
-	                content.append(LocalElementDeclaration())
+	                content.append(LocalElementDeclaration(self))
                 elif component == 'group':
-	            content.append(ModelGroupReference())
+	            content.append(ModelGroupReference(self))
                 elif component == 'choice':
-	            content.append(Choice())
+	            content.append(Choice(self))
                 elif component == 'sequence':
-	            content.append(Sequence())
+	            content.append(Sequence(self))
                 elif component == 'any':
-	            content.append(ElementWildCard())
+	            content.append(ElementWildCard(self))
                 else:
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
                 content[-1].fromDom(i)
@@ -1754,11 +1754,11 @@ class ModelGroupDefinition(XMLSchemaComponent,\
                     self.annotation.fromDom(i)
                     continue
                 elif component == 'all' and not self.content:
-                    self.content = All()
+                    self.content = All(self)
                 elif component == 'choice' and not self.content:
-                    self.content = Choice()
+                    self.content = Choice(self)
                 elif component == 'sequence' and not self.content:
-                    self.content = Sequence()
+                    self.content = Sequence(self)
                 else:
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
                 self.content.fromDom(i)
@@ -1797,7 +1797,7 @@ class ModelGroupReference(XMLSchemaComponent,\
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                 else:
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
@@ -1910,7 +1910,7 @@ class ComplexType(XMLSchemaComponent,\
                 component = SplitQName(i.getTagName())[1]
                 if component in self.__class__.contents['xsd']:
                     if component == 'annotation' and not self.annotation:
-                        self.annotation = Annotation()
+                        self.annotation = Annotation(self)
                         self.annotation.fromDom(i)
                         continue
                     elif component == 'restriction' and not self.derivation:
@@ -1976,16 +1976,19 @@ class ComplexType(XMLSchemaComponent,\
 
                 if component == 'all':
                     self.content = All(self)
+                    self.content.fromDom(contents[indx])
                 elif component == 'choice':
                     self.content = Choice(self)
+                    self.content.fromDom(contents[indx])
                 elif component == 'sequence':
                     self.content = Sequence(self)
+                    self.content.fromDom(contents[indx])
                 elif component == 'group':
                     self.content = ModelGroupReference(self)
+                    self.content.fromDom(contents[indx])
                 else:
-	            raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
+	            self.content = None
 
-                self.content.fromDom(contents[indx])
                 indx += 1
                 self.attr_content = []
                 while indx < num:
@@ -2242,7 +2245,7 @@ class SimpleType(XMLSchemaComponent,\
             for indx in range(len(contents)):
                 component = SplitQName(contents[indx].getTagName())[1]
                 if (component == 'annotation') and (not indx):
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(contents[indx])
                     continue
                 elif (component == 'simpleType') and (not indx or indx == 1):
