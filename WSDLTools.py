@@ -429,8 +429,8 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                input = operation.setInput(message, name, docs)
-                input.setAction(GetWSAActionInput(operation, item))
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                operation.setInput(message, name, docs, action)
 
             item = DOM.getElement(element, 'output', None, None)
             if item is not None:
@@ -438,16 +438,16 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                output = operation.setOutput(message, name, docs)
-                output.setAction(GetWSAActionOutput(operation, item))
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                operation.setOutput(message, name, docs, action)
 
             for item in DOM.getElements(element, 'fault', None):
                 name = DOM.getAttr(item, 'name')
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                fault = operation.addFault(message, name, docs)
-                fault.setAction(GetWSAActionFault(operation, item))
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                operation.addFault(message, name, docs, action)
                 
 
 
@@ -464,7 +464,7 @@ class Operation(Element):
 
     def getInputAction(self):
         """wsa:Action attribute"""
-        return self.input.action
+        return GetWSAActionInput(self)
 
     def getInputMessage(self):
         if self.input is None:
@@ -474,7 +474,7 @@ class Operation(Element):
 
     def getOutputAction(self):
         """wsa:Action attribute"""
-        return self.output.action
+        return GetWSAActionOutput(self)
 
     def getOutputMessage(self):
         if self.output is None:
@@ -484,39 +484,35 @@ class Operation(Element):
 
     def getFaultAction(self, name):
         """wsa:Action attribute"""
-        return self.faults[name].action
+        return GetWSAActionFault(self, name)
 
     def getFaultMessage(self, name):
         wsdl = self.getPortType().getWSDL()
         return wsdl.messages[self.faults[name].message]
 
-    def addFault(self, message, name, documentation=''):
+    def addFault(self, message, name, documentation='', action=None):
         if self.faults.has_key(name):
             raise WSDLError(
                 'Duplicate fault element: %s' % name
                 )
-        item = MessageRole('fault', message, name, documentation)
+        item = MessageRole('fault', message, name, documentation, action)
         self.faults[name] = item
         return item
 
-    def setInput(self, message, name='', documentation=''):
-        self.input = MessageRole('input', message, name, documentation)
+    def setInput(self, message, name='', documentation='', action=None):
+        self.input = MessageRole('input', message, name, documentation, action)
         return self.input
 
-    def setOutput(self, message, name='', documentation=''):
-        self.output = MessageRole('output', message, name, documentation)
+    def setOutput(self, message, name='', documentation='', action=None):
+        self.output = MessageRole('output', message, name, documentation, action)
         return self.output
 
 
 class MessageRole(Element):
-    def __init__(self, type, message, name='', documentation=''):
+    def __init__(self, type, message, name='', documentation='', action=None):
         Element.__init__(self, name, documentation)
         self.message = message
         self.type = type
-        self.action = None
-
-    def setAction(self, action):
-        """action is a URI, part of WS-Address specification """
         self.action = action
 
 
@@ -1001,17 +997,18 @@ def GetExtensions(element):
     return [ item for item in DOM.getElements(element, None, None)
         if item.namespaceURI != DOM.NS_WSDL ]
 
-def GetWSAActionFault(operation, element):
+def GetWSAActionFault(operation, name):
     """Find wsa:Action attribute, and return value or WSA.FAULT
        for the default.
     """
-    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+    attr = operation.faults[name].action
     if attr is not None:
         return attr
     return WSA.FAULT
 
-def GetWSAActionInput(operation, element):
-    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+def GetWSAActionInput(operation):
+    """Find wsa:Action attribute, and return value or the default."""
+    attr = operation.input.action
     if attr is not None:
         return attr
     targetNamespace = operation.getPortType().getWSDL().targetNamespace
@@ -1021,8 +1018,9 @@ def GetWSAActionInput(operation, element):
         return '%s%s/%s' %(targetNamespace, ptName, msgName)
     return '%s/%s/%s' %(targetNamespace, ptName, msgName)
 
-def GetWSAActionOutput(operation, element):
-    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+def GetWSAActionOutput(operation):
+    """Find wsa:Action attribute, and return value or the default."""
+    attr = operation.output.action
     if attr is not None:
         return attr.value
     targetNamespace = operation.getPortType().getWSDL().targetNamespace
