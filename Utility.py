@@ -394,13 +394,10 @@ class DOM:
            optional nsuri. If nsuri is not specified, returns true if an
            attribute exists with the given name with any namespace."""
         if nsuri is None:
-            if node._attrs.has_key(name):
-                return 1
-            for item in node._attrsNS.keys():
-                if item[1] == name:
-                    return 1
-            return 0
-        return node._attrsNS.has_key((nsuri, name))
+            if node.hasAttribute(name):
+                return True
+            return False
+        return node.hasAttributeNS(nsuri, name)
 
     def getAttr(self, node, name, nsuri=None, default=join):
         """Return the value of the attribute named 'name' with the
