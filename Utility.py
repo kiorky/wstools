@@ -694,6 +694,8 @@ if 1:
 		prefix, tag = xml.dom.minidom._nssplit(attr.nodeName)
 		if prefix == 'xmlns':
 		    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
+		elif prefix:
+		    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
 		else:
 		    a = clone.getAttributeNodeNS(attr.namespaceURI, attr.nodeName)
 		a.specified = attr.specified
