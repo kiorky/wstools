@@ -35,7 +35,7 @@ except ImportError:
         XML         = "http://www.w3.org/XML/1998/namespace"
         HTML        = "http://www.w3.org/TR/REC-html40"
 
-from Utility import DOM, Collection
+from Utility import DOM, DOMException, Collection
 from StringIO import StringIO
 try:
     from xml.dom.ext import SplitQName
@@ -280,7 +280,7 @@ class DOMAdapter(DOMAdapterInterface):
                 if prefix != 'xml':
                     raise SchemaError, '%s namespace not declared for %s'\
                         %(prefix, self.__node._get_tagName())
-                namespace = XMLNS
+                namespace = XMLNS.XML
         return namespace
            
     def loadDocument(self, file):
@@ -310,10 +310,116 @@ class XMLBase:
         XMLBase.__rlock.release()
         return tmp
 
+
+"""Marker Interface:  can determine something about an instances properties by using 
+        the provided convenience functions.
+
+"""
+class DefinitionMarker: 
+    """marker for definitions
+    """
+    pass
+
+class DeclarationMarker: 
+    """marker for declarations
+    """
+    pass
+
+class AttributeMarker: 
+    """marker for attributes
+    """
+    pass
+
+class AttributeGroupMarker: 
+    """marker for attribute groups
+    """
+    pass
+
+class WildCardMarker: 
+    """marker for wildcards
+    """
+    pass
+
+class ElementMarker: 
+    """marker for wildcards
+    """
+    pass
+
+class ReferenceMarker: 
+    """marker for references
+    """
+    pass
+
+class ModelGroupMarker: 
+    """marker for model groups
+    """
+    pass
+
+class ExtensionMarker: 
+    """marker for extensions
+    """
+    pass
+
+class RestrictionMarker: 
+    """marker for restrictions
+    """
+    facets = ['enumeration', 'length', 'maxExclusive', 'maxInclusive',\
+        'maxLength', 'minExclusive', 'minInclusive', 'minLength',\
+        'pattern', 'fractionDigits', 'totalDigits', 'whiteSpace']
+
+class SimpleMarker: 
+    """marker for simple type information
+    """
+    pass
+
+class ComplexMarker: 
+    """marker for complex type information
+    """
+    pass
+
+
+class MarkerInterface:
+    def isDefinition(self):
+        return isinstance(self, DefinitionMarker)
+
+    def isDeclaration(self):
+        return isinstance(self, DeclarationMarker)
+
+    def isAttribute(self):
+        return isinstance(self, AttributeMarker)
+
+    def isAttributeGroup(self):
+        return isinstance(self, AttributeGroupMarker)
+
+    def isElement(self):
+        return isinstance(self, ElementMarker)
+
+    def isReference(self):
+        return isinstance(self, ReferenceMarker)
+
+    def isWildCard(self):
+        return isinstance(self, WildCardMarker)
+
+    def isModelGroup(self):
+        return isinstance(self, ModelGroupMarker)
+
+    def isExtension(self):
+        return isinstance(self, ExtensionMarker)
+
+    def isRestriction(self):
+        return isinstance(self, RestrictionMarker)
+
+    def isSimple(self):
+        return isinstance(self, SimpleMarker)
+
+    def isComplex(self):
+        return isinstance(self, ComplexMarker)
+
+
 ##########################################################
 # Schema Components
 #########################################################
-class XMLSchemaComponent(XMLBase):
+class XMLSchemaComponent(XMLBase, MarkerInterface):
     """
        class variables: 
            required -- list of required attributes
@@ -391,6 +497,8 @@ class XMLSchemaComponent(XMLBase):
     def getXMLNS(self, prefix=None):
         """deference prefix or by default xmlns, returns namespace. 
         """
+        if prefix == XMLSchemaComponent.xml:
+            return XMLNS.XML
         parent = self
         ns = self.attributes[XMLSchemaComponent.xmlns].get(prefix or\
                 XMLSchemaComponent.xmlns_key)
@@ -490,9 +598,8 @@ class XMLSchemaComponent(XMLBase):
                 raise SchemaError,\
                     'class instance %s, missing required attribute %s'\
                     %(self.__class__, a)
-       
         for a in self.attributes.keys():
-            if (a != XMLSchemaComponent.xmlns) and\
+            if (a not in (XMLSchemaComponent.xmlns, XMLNS.XML)) and\
                 (a not in self.__class__.attributes.keys()) and not\
                 (self.isAttribute() and self.isReference()):
                 raise SchemaError, '%s, unknown attribute' %a
@@ -512,109 +619,6 @@ class WSDLToolsAdapter(XMLSchemaComponent):
         """returns WSDLTools.WSDL types Collection
         """
         return self._parent().types
-
-"""Marker Interface:  can determine something about an instances properties by using 
-        the provided convenience functions.
-
-"""
-class DefinitionMarker: 
-    """marker for definitions
-    """
-    pass
-
-class DeclarationMarker: 
-    """marker for declarations
-    """
-    pass
-
-class AttributeMarker: 
-    """marker for attributes
-    """
-    pass
-
-class AttributeGroupMarker: 
-    """marker for attribute groups
-    """
-    pass
-
-class WildCardMarker: 
-    """marker for wildcards
-    """
-    pass
-
-class ElementMarker: 
-    """marker for wildcards
-    """
-    pass
-
-class ReferenceMarker: 
-    """marker for references
-    """
-    pass
-
-class ModelGroupMarker: 
-    """marker for model groups
-    """
-    pass
-
-class ExtensionMarker: 
-    """marker for extensions
-    """
-    pass
-
-class RestrictionMarker: 
-    """marker for restrictions
-    """
-    facets = ['enumeration', 'length', 'maxExclusive', 'maxInclusive',\
-        'maxLength', 'minExclusive', 'minInclusive', 'minLength',\
-        'pattern', 'fractionDigits', 'totalDigits', 'whiteSpace']
-
-class SimpleMarker: 
-    """marker for simple type information
-    """
-    pass
-
-class ComplexMarker: 
-    """marker for complex type information
-    """
-    pass
-
-class MarkerInterface:
-    def isDefinition(self):
-        return isinstance(self, DefinitionMarker)
-
-    def isDeclaration(self):
-        return isinstance(self, DeclarationMarker)
-
-    def isAttribute(self):
-        return isinstance(self, AttributeMarker)
-
-    def isAttributeGroup(self):
-        return isinstance(self, AttributeGroupMarker)
-
-    def isElement(self):
-        return isinstance(self, ElementMarker)
-
-    def isReference(self):
-        return isinstance(self, ReferenceMarker)
-
-    def isWildCard(self):
-        return isinstance(self, WildCardMarker)
-
-    def isModelGroup(self):
-        return isinstance(self, ModelGroupMarker)
-
-    def isExtension(self):
-        return isinstance(self, ExtensionMarker)
-
-    def isRestriction(self):
-        return isinstance(self, RestrictionMarker)
-
-    def isSimple(self):
-        return isinstance(self, SimpleMarker)
-
-    def isComplex(self):
-        return isinstance(self, ComplexMarker)
 
 
 class Notation(XMLSchemaComponent):
@@ -1059,7 +1063,7 @@ class XMLSchema(XMLSchemaComponent):
                 indx += 1
 
 
-    class Import(XMLSchemaComponent, MarkerInterface):
+    class Import(XMLSchemaComponent):
         """<import> 
            parent:
                schema
@@ -1117,7 +1121,7 @@ class XMLSchema(XMLSchemaComponent):
             return self._schema or schema
 
 
-    class Include(XMLSchemaComponent, MarkerInterface):
+    class Include(XMLSchemaComponent):
         """<include schemaLocation>
            parent:
                schema
@@ -1172,7 +1176,6 @@ class XMLSchema(XMLSchemaComponent):
 
 
 class AttributeDeclaration(XMLSchemaComponent,\
-                           MarkerInterface,\
                            AttributeMarker,\
                            DeclarationMarker):
     """<attribute name>
@@ -1219,7 +1222,6 @@ class AttributeDeclaration(XMLSchemaComponent,\
 
 
 class LocalAttributeDeclaration(AttributeDeclaration,\
-                                MarkerInterface,\
                                 AttributeMarker,\
                                 DeclarationMarker):
     """<attribute name>
@@ -1268,7 +1270,6 @@ class LocalAttributeDeclaration(AttributeDeclaration,\
 
 
 class AttributeWildCard(XMLSchemaComponent,\
-                        MarkerInterface,\
                         AttributeMarker,\
                         DeclarationMarker,\
                         WildCardMarker):
@@ -1306,7 +1307,6 @@ class AttributeWildCard(XMLSchemaComponent,\
 
 
 class AttributeReference(XMLSchemaComponent,\
-                         MarkerInterface,\
                          AttributeMarker,\
                          ReferenceMarker):
     """<attribute ref>
@@ -1347,7 +1347,6 @@ class AttributeReference(XMLSchemaComponent,\
 
 
 class AttributeGroupDefinition(XMLSchemaComponent,\
-                               MarkerInterface,\
                                AttributeGroupMarker,\
                                DefinitionMarker):
     """<attributeGroup name>
@@ -1399,7 +1398,6 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
         self.attr_content = tuple(content)
 
 class AttributeGroupReference(XMLSchemaComponent,\
-                              MarkerInterface,\
                               AttributeGroupMarker,\
                               ReferenceMarker):
     """<attributeGroup ref>
@@ -1584,7 +1582,6 @@ class KeyRef(IdentityConstrants):
 
 
 class ElementDeclaration(XMLSchemaComponent,\
-                         MarkerInterface,\
                          ElementMarker,\
                          DeclarationMarker):
     """<element name>
@@ -1695,7 +1692,6 @@ class LocalElementDeclaration(ElementDeclaration):
 
 
 class ElementReference(XMLSchemaComponent,\
-                       MarkerInterface,\
                        ElementMarker,\
                        ReferenceMarker):
     """<element ref>
@@ -1777,7 +1773,6 @@ class ElementWildCard(LocalElementDeclaration,\
 # Model Groups
 #####################################################
 class Sequence(XMLSchemaComponent,\
-               MarkerInterface,\
                ModelGroupMarker):
     """<sequence>
        parents: 
@@ -1835,7 +1830,6 @@ class Sequence(XMLSchemaComponent,\
 
 
 class All(XMLSchemaComponent,\
-          MarkerInterface,\
           ModelGroupMarker):
     """<all>
        parents: 
@@ -1884,7 +1878,6 @@ class All(XMLSchemaComponent,\
 
 
 class Choice(XMLSchemaComponent,\
-             MarkerInterface,\
              ModelGroupMarker):
     """<choice>
        parents: 
@@ -1942,7 +1935,6 @@ class Choice(XMLSchemaComponent,\
 
 
 class ModelGroupDefinition(XMLSchemaComponent,\
-                           MarkerInterface,\
                            ModelGroupMarker,\
                            DefinitionMarker):
     """<group name>
@@ -1973,7 +1965,7 @@ class ModelGroupDefinition(XMLSchemaComponent,\
             component = SplitQName(i.getTagName())[1]
             if component in self.__class__.contents['xsd']:
                 if component == 'annotation' and not self.annotation:
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(i)
                     continue
                 elif component == 'all' and not self.content:
@@ -1990,7 +1982,6 @@ class ModelGroupDefinition(XMLSchemaComponent,\
 
 
 class ModelGroupReference(XMLSchemaComponent,\
-                          MarkerInterface,\
                           ModelGroupMarker,\
                           ReferenceMarker):
     """<group ref>
@@ -2034,7 +2025,6 @@ class ModelGroupReference(XMLSchemaComponent,\
 
 
 class ComplexType(XMLSchemaComponent,\
-                  MarkerInterface,\
                   DefinitionMarker,\
                   ComplexMarker):
     """<complexType name>
@@ -2151,7 +2141,6 @@ class ComplexType(XMLSchemaComponent,\
                 self.derivation.fromDom(i)
 
     class ComplexContent(_DerivedType,\
-                         MarkerInterface,\
                          ComplexMarker):
         """<complexContent>
            parents:
@@ -2229,7 +2218,10 @@ class ComplexType(XMLSchemaComponent,\
                         else:
                             self.attr_content.append(LocalAttributeDeclaration(self))
                     elif component == 'attributeGroup':
-                        self.attr_content.append(AttributeGroupDefinition(self))
+                        if contents[indx].hasattr('ref'):
+                            self.attr_content.append(AttributeGroupReference(self))
+                        else:
+                            self.attr_content.append(AttributeGroupDefinition(self))
                     elif component == 'anyAttribute':
                         self.attr_content.append(AttributeWildCard(self))
                     else:
@@ -2237,7 +2229,8 @@ class ComplexType(XMLSchemaComponent,\
                     self.attr_content[-1].fromDom(contents[indx])
                     indx += 1
 
-        class Extension(_DerivationBase, MarkerInterface, ExtensionMarker):
+        class Extension(_DerivationBase, 
+                        ExtensionMarker):
             """<extension base>
                parents:
                    complexContent
@@ -2252,7 +2245,6 @@ class ComplexType(XMLSchemaComponent,\
             pass
 
         class Restriction(_DerivationBase,\
-                          MarkerInterface,\
                           RestrictionMarker):
             """<restriction base>
                parents:
@@ -2269,7 +2261,6 @@ class ComplexType(XMLSchemaComponent,\
 
 
     class SimpleContent(_DerivedType,\
-                        MarkerInterface,\
                         SimpleMarker):
         """<simpleContent>
            parents:
@@ -2284,7 +2275,6 @@ class ComplexType(XMLSchemaComponent,\
         contents = {'xsd':['annotation', 'restriction', 'extension']}
 
         class Extension(XMLSchemaComponent,\
-                        MarkerInterface,\
                         ExtensionMarker):
             """<extension base>
                parents:
@@ -2341,7 +2331,6 @@ class ComplexType(XMLSchemaComponent,\
 
 
         class Restriction(XMLSchemaComponent,\
-                          MarkerInterface,\
                           RestrictionMarker):
             """<restriction base>
                parents:
@@ -2382,7 +2371,6 @@ class LocalComplexType(ComplexType):
     
 
 class SimpleType(XMLSchemaComponent,\
-                 MarkerInterface,\
                  DefinitionMarker,\
                  SimpleMarker):
     """<simpleType name>
@@ -2432,7 +2420,6 @@ class SimpleType(XMLSchemaComponent,\
         self.content.fromDom(child)
 
     class Restriction(XMLSchemaComponent,\
-                      MarkerInterface,\
                       RestrictionMarker):
         """<restriction base>
            parents:
@@ -2558,7 +2545,6 @@ class SimpleType(XMLSchemaComponent,\
 
                  
 class AnonymousSimpleType(SimpleType,\
-                          MarkerInterface,\
                           SimpleMarker):
     """<simpleType>
        parents:
