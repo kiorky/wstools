@@ -11,6 +11,7 @@ ident = "$Id$"
 
 from Utility import DOM, Collection, CollectionNS
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
+from Namespaces import WSR, WSA
 from StringIO import StringIO
 import urllib
 
@@ -379,18 +380,22 @@ class MessagePart(Element):
 
 class PortType(Element):
     '''PortType has a anyAttribute, thus must provide for an extensible
-       mechanism for supporting such attributes.  
+       mechanism for supporting such attributes.  ResourceProperties is
+       specified in WS-ResourceProperties.   wsa:Action is specified in
+       WS-Address.
 
        Instance Data:
-           operations -- 
-           attributes --
-
+           name -- name attribute
+           resourceProperties -- optional. wsr:ResourceProperties attribute,
+              value is a QName this is Parsed into a (namespaceURI, name)
+              that represents a Global Element Declaration.
+           operations
     '''
 
     def __init__(self, name, documentation=''):
         Element.__init__(self, name, documentation)
         self.operations = Collection(self)
-        self.attributes = {}
+        self.resourceProperties = None
 
     def getWSDL(self):
         return self.parent().parent()
@@ -403,7 +408,10 @@ class PortType(Element):
     def load(self, element):
         self.name = DOM.getAttr(element, 'name')
         self.documentation = GetDocumentation(element)
-        self.attributes.update(DOM.getAttrs(element))
+
+        if DOM.hasAttr(element, 'ResourceProperties', WSR.PROPERTIES):
+            rpref = DOM.getAttr(element, 'ResourceProperties', WSR.PROPERTIES)
+            self.resourceProperties = ParseQName(rpref, element)
 
         NS_WSDL = DOM.GetWSDLUri(self.getWSDL().version)
         elements = DOM.getElements(element, 'operation', NS_WSDL)
@@ -421,7 +429,8 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                operation.setInput(message, name, docs)
+                input = operation.setInput(message, name, docs)
+                input.setAction(GetWSAActionInput(operation, item))
 
             item = DOM.getElement(element, 'output', None, None)
             if item is not None:
@@ -429,14 +438,17 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                operation.setOutput(message, name, docs)
+                output = operation.setOutput(message, name, docs)
+                output.setAction(GetWSAActionOutput(operation, item))
 
             for item in DOM.getElements(element, 'fault', None):
                 name = DOM.getAttr(item, 'name')
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                operation.addFault(message, name, docs)
+                fault = operation.addFault(message, name, docs)
+                fault.setAction(GetWSAActionFault(operation, item))
+                
 
 
 class Operation(Element):
@@ -450,17 +462,29 @@ class Operation(Element):
     def getPortType(self):
         return self.parent().parent()
 
+    def getInputAction(self):
+        """wsa:Action attribute"""
+        return self.input.action
+
     def getInputMessage(self):
         if self.input is None:
             return None
         wsdl = self.getPortType().getWSDL()
         return wsdl.messages[self.input.message]
 
+    def getOutputAction(self):
+        """wsa:Action attribute"""
+        return self.output.action
+
     def getOutputMessage(self):
         if self.output is None:
             return None
         wsdl = self.getPortType().getWSDL()
         return wsdl.messages[self.output.message]
+
+    def getFaultAction(self, name):
+        """wsa:Action attribute"""
+        return self.faults[name].action
 
     def getFaultMessage(self, name):
         wsdl = self.getPortType().getWSDL()
@@ -489,6 +513,11 @@ class MessageRole(Element):
         Element.__init__(self, name, documentation)
         self.message = message
         self.type = type
+        self.action = None
+
+    def setAction(self, action):
+        """action is a URI, part of WS-Address specification """
+        self.action = action
 
 
 class Binding(Element):
@@ -971,6 +1000,37 @@ def GetDocumentation(element):
 def GetExtensions(element):
     return [ item for item in DOM.getElements(element, None, None)
         if item.namespaceURI != DOM.NS_WSDL ]
+
+def GetWSAActionFault(operation, element):
+    """Find wsa:Action attribute, and return value or WSA.FAULT
+       for the default.
+    """
+    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+    if attr is not None:
+        return attr
+    return WSA.FAULT
+
+def GetWSAActionInput(operation, element):
+    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+    if attr is not None:
+        return attr
+    targetNamespace = operation.getPortType().getWSDL().targetNamespace
+    ptName = operation.getPortType().name
+    msgName = operation.getInputMessage().name
+    if targetNamespace.endswith('/'):
+        return '%s%s/%s' %(targetNamespace, ptName, msgName)
+    return '%s/%s/%s' %(targetNamespace, ptName, msgName)
+
+def GetWSAActionOutput(operation, element):
+    attr = DOM.getAttr(element, 'Action', WSA.ADDRESS, None)
+    if attr is not None:
+        return attr.value
+    targetNamespace = operation.getPortType().getWSDL().targetNamespace
+    ptName = operation.getPortType().name
+    msgName = operation.getOutputMessage().name
+    if targetNamespace.endswith('/'):
+        return '%s%s/%s' %(targetNamespace, ptName, msgName)
+    return '%s/%s/%s' %(targetNamespace, ptName, msgName)
 
 def FindExtensions(object, kind, t_type=type(())):
     if isinstance(kind, t_type):
