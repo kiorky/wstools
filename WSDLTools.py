@@ -58,7 +58,7 @@ class WSDL:
        may be created manually or loaded from an xml representation
        using a WSDLReader instance."""
 
-    def __init__(self, targetNamespace=None):
+    def __init__(self, targetNamespace=None, strict=1):
         self.targetNamespace = targetNamespace or 'urn:this-document.wsdl'
         self.documentation = ''
         self.location = None
@@ -71,6 +71,7 @@ class WSDL:
         self.imports = Collection(self)
         self.types = Types(self)
         self.extensions = []
+        self.strict = strict
 
     def __del__(self):
         if self.document is not None:
@@ -1125,7 +1126,20 @@ def callInfoFromWSDL(port, name):
                     )
 
     if operation.output is not None:
-        message = messages[operation.output.message]
+        try:
+            message = messages[operation.output.message]
+        except KeyError:
+            if self.strict:
+                raise RuntimeError(
+                    "Recieved message not defined in the WSDL schema: %s",
+                    operation.output.message)
+            else:
+                message = wsdl.addMessage(operation.output.message)
+                print "Warning:",
+                      "Recieved message not defined in the WSDL schema.",
+                      "Adding it."
+                print "Message:", operation.output.message
+         
         msgrole = opbinding.output
 
         mime = msgrole.findBinding(MimeMultipartRelatedBinding)
