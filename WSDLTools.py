@@ -21,11 +21,14 @@ class WSDLReader:
     # strategy or other optimizations. Because application needs vary 
     # so widely, we don't try to provide any caching by default.
 
-    def loadFromStream(self, file):
+    def loadFromStream(self, file, name=None):
         """Return a WSDL instance loaded from a file object."""
         document = DOM.loadDocument(file)
         wsdl = WSDL()
-        wsdl.location = file.name
+        if name:
+            wsdl.location = name
+        else:
+            wsdl.location = file.name
         wsdl.load(document)
         return wsdl
 
