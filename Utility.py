@@ -620,22 +620,20 @@ class MessageInterface:
         '''Constructor, May be extended, do not override.
             sw -- soapWriter instance
         '''
-        self.sw = sw
-
-    def getSoapWriter(self, sw):
-        return self._sw()
-    def setSoapWriter(self, sw):
-        self._sw = weakref.ref(sw)
-    sw = property(getSoapWriter, setSoapWriter, None, "soap writer instance.")
+        self.sw = None
+        if type(sw) != weakref.ReferenceType and sw is not None:
+            self.sw = weakref.ref(sw)
+        else:
+            self.sw = sw
 
     def AddCallback(self, func, *arglist):
-        self.sw.AddCallback(func, *arglist)
+        self.sw().AddCallback(func, *arglist)
 
     def Known(self, obj):
-        return self.sw.Known(obj)
+        return self.sw().Known(obj)
 
     def Forget(self, obj):
-        return self.sw.Forget(obj)
+        return self.sw().Forget(obj)
 
     def canonicalize(self):
         '''canonicalize the underlying DOM, and return as string.
