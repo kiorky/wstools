@@ -15,6 +15,7 @@ from Namespaces import WSR, WSA
 from StringIO import StringIO
 import urllib
 
+
 class WSDLReader:
     """A WSDLReader creates WSDL instances from urls and xml data."""
 
@@ -69,7 +70,7 @@ class WSDL:
         self.messages = CollectionNS(self)
         self.portTypes = CollectionNS(self)
         self.bindings = CollectionNS(self)
-        self.imports = Collection(self)
+        #self.imports = Collection(self)
         self.types = Types(self)
         self.extensions = []
         self.strict = strict
@@ -77,7 +78,6 @@ class WSDL:
     def __del__(self):
         if self.document is not None:
             self.document.unlink()
-            self.document = None
 
     version = '1.1'
 
@@ -125,10 +125,10 @@ class WSDL:
         self.bindings[name] = item
         return item
 
-    def addImport(self, namespace, location):
-        item = ImportElement(namespace, location)
-        self.imports[namespace] = item
-        return item
+    #def addImport(self, namespace, location):
+    #    item = ImportElement(namespace, location)
+    #    self.imports[namespace] = item
+    #    return item
 
     def load(self, document):
         # We save a reference to the DOM document to ensure that elements
@@ -152,26 +152,35 @@ class WSDL:
 
         # Resolve (recursively) any import elements in the document.
         imported = {}
+        base_location = self.location
         while 1:
+            #XXX
             imports = []
             for element in DOM.getElements(definitions, 'import', NS_WSDL):
                 location = DOM.getAttr(element, 'location')
+                # Resolve relative location, and save
+                location = urllib.basejoin(base_location, location)
+
                 if not imported.has_key(location):
                     imports.append(element)
+
             if not imports:
                 break
             for element in imports:
-                self._import(document, element)
                 location = DOM.getAttr(element, 'location')
+                self._import(document, element, base_location)
+                location = urllib.basejoin(base_location, location)
                 imported[location] = 1
+            base_location = ''
 
-        reader = SchemaReader(base_url=self.location)
+        #reader = SchemaReader(base_url=self.location)
         for element in DOM.getElements(definitions, None, None):
             targetNamespace = DOM.getAttr(element, 'targetNamespace')
             localName = element.localName
 
             if not DOM.nsUriMatch(element.namespaceURI, NS_WSDL):
                 if localName == 'schema':
+                    reader = SchemaReader(base_url=self.location)
                     schema = reader.loadFromNode(WSDLToolsAdapter(self), element)
                     schema.setBaseUrl(self.location)
                     self.types.addSchema(schema)
@@ -222,30 +231,51 @@ class WSDL:
 
             elif localName == 'types':
                 self.types.documentation = GetDocumentation(element)
+                base_location = DOM.getAttr(element, 'base-location')
+                if base_location:
+                    element.removeAttribute('base-location')
+                base_location = base_location or self.location
+                reader = SchemaReader(base_url=base_location)
                 for item in DOM.getElements(element, None, None):
                     if item.localName == 'schema':
                         schema = reader.loadFromNode(WSDLToolsAdapter(self), item)
-                        schema.setBaseUrl(self.location)
+                        # XXX <types> could have been imported
+                        #schema.setBaseUrl(self.location)
+                        schema.setBaseUrl(base_location)
                         self.types.addSchema(schema)
                     else:
                         self.types.addExtension(item)
+                # XXX remove the attribute
+                # element.removeAttribute('base-location')
                 continue
 
-    def _import(self, document, element):
+    def _import(self, document, element, base_location=None):
+        '''Algo take <import> element's children, clone them,
+        and add them to the main document.  Support for relative 
+        locations is a bit complicated.  The orig document context
+        is lost, so we need to store base location in DOM elements
+        representing <types>, by creating a special temporary 
+        "base-location" attribute,  and <import>, by resolving
+        the relative "location" and storing it as "location".
+        
+        document -- document we are loading
+        element -- DOM Element representing <import> 
+        base_location -- location of document from which this
+            <import> was gleaned.
+        '''
         namespace = DOM.getAttr(element, 'namespace', default=None)
         location = DOM.getAttr(element, 'location', default=None)
         if namespace is None or location is None:
             raise WSDLError(
                 'Invalid import element (missing namespace or location).'
                 )
+        if base_location:
+            location = urllib.basejoin(base_location, location)
+            element.setAttributeNS(None, 'location', location)
 
-        # Sort-of support relative locations to simplify unit testing. The
-        # WSDL specification actually doesn't allow relative URLs, so its
-        # ok that this only works with urls relative to the initial document.
-        location = urllib.basejoin(self.location, location)
-
-        obimport = self.addImport(namespace, location)
-        obimport._loaded = 1
+        #location = urllib.basejoin(self.location, location)
+        #obimport = self.addImport(namespace, location)
+        #obimport._loaded = 1
 
         importdoc = DOM.loadFromURL(location)
         try:
@@ -279,9 +309,18 @@ class WSDL:
                     if attrkey[0] == DOM.NS_XMLNS:
                         attr = attrsNS[attrkey].cloneNode(1)
                         child.setAttributeNode(attr)
+
+                #XXX Quick Hack, should be in WSDL Namespace.
+                if child.localName == 'import':
+                    rlocation = child.getAttributeNS(None, 'location')
+                    alocation = urllib.basejoin(location, rlocation)
+                    child.setAttribute('location', alocation)
+                elif child.localName == 'types':
+                    child.setAttribute('base-location', location)
+
         finally:
             importdoc.unlink()
-
+        return location
 
 class Element:
     """A class that provides common functions for WSDL element classes."""
