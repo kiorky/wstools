@@ -37,6 +37,7 @@ siteInsepct = xmethods/siteInspect.wsdl
 TemperatureService = xmethods/TemperatureService.wsdl
 usweather = xmethods/usweather.wsdl
 zip2geo = xmethods/zip2geo.wsdl
+SolveSystem = xmethods/SolveSystem.wsdl.xml
 
 
 ##########################################################################
@@ -46,6 +47,15 @@ zip2geo = xmethods/zip2geo.wsdl
 [services_by_http]
 amazon = http://soap.amazon.com/schemas/AmazonWebServices.wsdl
 homelandsecurity = http://www.boyzoid.com/threat.cfc?wsdl
-rtf2html = http://www.infoaccelerator.net/cfc/rft2html.cfc?WSDL
+SolveSystem = http://www.lixusnet.com/SolveSystem.wsdl
+
+
+##########################################################################
+# SECTION [broken] - Legal challenges.  Appears to be a problem
+#    in the wsdl.
+##########################################################################
+[broken]
+rtf2html = http://www.infoaccelerator.net/cfc/rft2html.cfc?WSDL 
+rtf2html = xmethods/rtf2html.xml
 
 

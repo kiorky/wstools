@@ -6,6 +6,44 @@ TESTS:
     test_t1 -- Basic test, just checks that wsdl and xsd objects are in the
 	right places.
 
+ADDING TESTS:
+    1. For Stand-Alone tests add WSDL FILE to appropriate archive file
+        Need to add a NEW Archive?:
+            config.py [files] "archive" -- tuple of all archive files, 
+            if you need to create a new archive append the archive 
+            name to the 'archive' tuple.
+
+    2. Edit config.py section(s):
+        option -- name by which service will be referenced in test case.
+            Need an entry under appropriate section(s), this name
+            must be unique within each section it appears but it may 
+            appear in multiple sections.
+
+        config.py "test" sections:
+          Stand-Alone --  add "option" under [services_by_file]
+		eg. amazon = exports/AmazonWebServices.wsdl
+
+          Network -- add "option" under [services_by_http]
+		eg. amazon = http://soap.amazon.com/schemas/AmazonWebServices.wsdl
+
+          Broken -- add "option" under [broken]
+
+    3. In test module(s)
+        a. Add test case:
+
+           #eg. test_t1.py 
+	   class AmazonTestCase(WSDLToolsTestCase):
+		def test(self):
+		    self.option = 'amazon'
+		    self.loadFromConfig(CONFIG)
+
+        b. Add class name of test case to CASES list.
+		CASES = [AirportTestCase,
+         		 AmazonTestCase, 
+                         .... etc
+
+    4. Done
+
 
 CONTENTS OF SAMPLE WSDL/XSD:
     schema -- Taken from globus-3.0.1(http://www.globus.org)
@@ -25,6 +63,6 @@ CONTENTS OF SAMPLE WSDL/XSD:
          siteInspect.wsdl
          TemperatureService.wsdl
          usweather.wsdl
+         rtf2html.xml
+         SolveSystem.wsdl.xml
          zip2geo.wsdl
-
-

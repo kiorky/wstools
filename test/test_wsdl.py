@@ -26,11 +26,11 @@ class WSDLToolsTestCase(unittest.TestCase):
             self.wsdlTypes()
 
     def loadFromConfig(self, config=CONFIG):
+        self.wsdl = None
         try:
-            print config
             path = config.get(self.section, self.option)
         except NoOptionError, ex:
-            self.wsdl = None
+            pass
         else:
             if path[:7] == 'http://':
                 self.loadFromURL(url=path)
