@@ -400,6 +400,9 @@ class PortType(Element):
     def getWSDL(self):
         return self.parent().parent()
 
+    def getResourceProperties(self):
+        return self.resourceProperties
+
     def addOperation(self, name, documentation='', parameterOrder=None):
         item = Operation(name, documentation, parameterOrder)
         self.operations[name] = item
