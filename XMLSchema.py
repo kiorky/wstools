@@ -1100,7 +1100,8 @@ class XMLSchema(XMLSchemaComponent):
                 if not schema and self._parent()._parent:
                     schema = self._parent()._parent().getImportSchemas().get(ns)
                 if not schema:
-                    if not self.attributes.has_key('schemaLocation'):
+                    url = self.attributes.get('schemaLocation')
+                    if not url:
                         raise SchemaError, 'namespace(%s) is unknown' %ns
                     base_url = self._parent().getBaseUrl()
                     reader = SchemaReader(base_url=base_url)
