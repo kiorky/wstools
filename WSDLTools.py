@@ -9,7 +9,7 @@
 
 ident = "$Id$"
 
-from Utility import DOM, Collection
+from Utility import DOM, Collection, CollectionNS
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 from StringIO import StringIO
 import urllib
@@ -64,10 +64,10 @@ class WSDL:
         self.location = None
         self.document = None
         self.name = None
-        self.services = Collection(self)
-        self.messages = Collection(self)
-        self.portTypes = Collection(self)
-        self.bindings = Collection(self)
+        self.services = CollectionNS(self)
+        self.messages = CollectionNS(self)
+        self.portTypes = CollectionNS(self)
+        self.bindings = CollectionNS(self)
         self.imports = Collection(self)
         self.types = Types(self)
         self.extensions = []
@@ -80,39 +80,47 @@ class WSDL:
 
     version = '1.1'
 
-    def addService(self, name, documentation=''):
+    def addService(self, name, documentation='', targetNamespace=None):
         if self.services.has_key(name):
             raise WSDLError(
                 'Duplicate service element: %s' % name
                 )
         item = Service(name, documentation)
+        if targetNamespace:
+            item.targetNamespace = targetNamespace
         self.services[name] = item
         return item
 
-    def addMessage(self, name, documentation=''):
+    def addMessage(self, name, documentation='', targetNamespace=None):
         if self.messages.has_key(name):
             raise WSDLError(
                 'Duplicate message element: %s.' % name
                 )
         item = Message(name, documentation)
+        if targetNamespace:
+            item.targetNamespace = targetNamespace
         self.messages[name] = item
         return item
 
-    def addPortType(self, name, documentation=''):
+    def addPortType(self, name, documentation='', targetNamespace=None):
         if self.portTypes.has_key(name):
             raise WSDLError(
                 'Duplicate portType element: name'
                 )
         item = PortType(name, documentation)
+        if targetNamespace:
+            item.targetNamespace = targetNamespace
         self.portTypes[name] = item
         return item
 
-    def addBinding(self, name, type, documentation=''):
+    def addBinding(self, name, type, documentation='', targetNamespace=None):
         if self.bindings.has_key(name):
             raise WSDLError(
                 'Duplicate binding element: %s' % name
                 )
         item = Binding(name, type, documentation)
+        if targetNamespace:
+            item.targetNamespace = targetNamespace
         self.bindings[name] = item
         return item
 
@@ -158,6 +166,7 @@ class WSDL:
 
         reader = SchemaReader(base_url=self.location)
         for element in DOM.getElements(definitions, None, None):
+            targetNamespace = DOM.getAttr(element, 'targetNamespace')
             localName = element.localName
 
             if not DOM.nsUriMatch(element.namespaceURI, NS_WSDL):
@@ -172,7 +181,7 @@ class WSDL:
             elif localName == 'message':
                 name = DOM.getAttr(element, 'name')
                 docs = GetDocumentation(element)
-                message = self.addMessage(name, docs)
+                message = self.addMessage(name, docs, targetNamespace)
                 parts = DOM.getElements(element, 'part', NS_WSDL)
                 message.load(parts)
                 continue
@@ -180,9 +189,10 @@ class WSDL:
             elif localName == 'portType':
                 name = DOM.getAttr(element, 'name')
                 docs = GetDocumentation(element)
-                ptype = self.addPortType(name, docs)
-                operations = DOM.getElements(element, 'operation', NS_WSDL)
-                ptype.load(operations)
+                ptype = self.addPortType(name, docs, targetNamespace)
+                #operations = DOM.getElements(element, 'operation', NS_WSDL)
+                #ptype.load(operations)
+                ptype.load(element)
                 continue
 
             elif localName == 'binding':
@@ -194,7 +204,7 @@ class WSDL:
                         )
                 type = type.split(':', 1)[-1]
                 docs = GetDocumentation(element)
-                binding = self.addBinding(name, type, docs)
+                binding = self.addBinding(name, type, docs, targetNamespace)
                 operations = DOM.getElements(element, 'operation', NS_WSDL)
                 binding.load(operations)
                 binding.load_ex(GetExtensions(element))
@@ -203,7 +213,7 @@ class WSDL:
             elif localName == 'service':
                 name = DOM.getAttr(element, 'name')
                 docs = GetDocumentation(element)
-                service = self.addService(name, docs)
+                service = self.addService(name, docs, targetNamespace)
                 ports = DOM.getElements(element, 'port', NS_WSDL)
                 service.load(ports)
                 service.load_ex(GetExtensions(element))
@@ -350,11 +360,37 @@ class MessagePart(Element):
         self.element = None
         self.type = None
 
+    def getWSDL(self):
+        """Return the WSDL object that contains this Message Part."""
+        return self.parent().parent().parent().parent()
+
+    def getTypeDefinition(self):
+        wsdl = self.getWSDL()
+        nsuri,name = self.type
+        schema = wsdl.types.get(nsuri, {})
+        return schema.get(name)
+
+    def getElementDeclaration(self):
+        wsdl = self.getWSDL()
+        nsuri,name = self.element
+        schema = wsdl.types.get(nsuri, {})
+        return schema.get(name)
+
 
 class PortType(Element):
+    '''PortType has a anyAttribute, thus must provide for an extensible
+       mechanism for supporting such attributes.  
+
+       Instance Data:
+           operations -- 
+           attributes --
+
+    '''
+
     def __init__(self, name, documentation=''):
         Element.__init__(self, name, documentation)
         self.operations = Collection(self)
+        self.attributes = {}
 
     def getWSDL(self):
         return self.parent().parent()
@@ -364,7 +400,13 @@ class PortType(Element):
         self.operations[name] = item
         return item
 
-    def load(self, elements):
+    def load(self, element):
+        self.name = DOM.getAttr(element, 'name')
+        self.documentation = GetDocumentation(element)
+        self.attributes.update(DOM.getAttrs(element))
+
+        NS_WSDL = DOM.GetWSDLUri(self.getWSDL().version)
+        elements = DOM.getElements(element, 'operation', NS_WSDL)
         for element in elements:
             name = DOM.getAttr(element, 'name')
             docs = GetDocumentation(element)
@@ -424,7 +466,7 @@ class Operation(Element):
         wsdl = self.getPortType().getWSDL()
         return wsdl.messages[self.faults[name].message]
 
-    def addFault(self, name, message, documentation=''):
+    def addFault(self, message, name, documentation=''):
         if self.faults.has_key(name):
             raise WSDLError(
                 'Duplicate fault element: %s' % name

@@ -9,6 +9,7 @@
 
 ident = "$Id$"
 
+import types
 from string import join, strip, split
 from UserDict import UserDict
 from StringIO import StringIO
@@ -421,6 +422,14 @@ class DOM:
             return default
         return ''
 
+    def getAttrs(self, node):
+        """Return a Collection of all attributes 
+        """
+        attrs = {}
+        for k,v in node._attrs.items():
+            attrs[k] = v.value
+        return attrs
+
     def getElementText(self, node, preserve_ws=None):
         """Return the text value of an xml element node. Leading and trailing
            whitespace is stripped from the value unless the preserve_ws flag
@@ -576,6 +585,49 @@ class Collection(UserDict):
 
     def keys(self):
         return map(lambda i: self._func(i), self.list)
+
+    def items(self):
+        return map(lambda i: (self._func(i), i), self.list)
+
+    def values(self):
+        return self.list
+
+
+class CollectionNS(UserDict):
+    """Helper class for maintaining ordered named collections."""
+    default = lambda self,k: k.name
+    def __init__(self, parent, key=None):
+        UserDict.__init__(self)
+        self.parent = weakref.ref(parent)
+        self.targetNamespace = None
+        self.list = []
+        self._func = key or self.default
+
+    def __getitem__(self, key):
+        self.targetNamespace = self.parent().targetNamespace
+        if type(key) is types.IntType:
+            return self.list[key]
+        elif self.__isSequence(key):
+            nsuri,name = key
+            return self.data[nsuri][name]
+        return self.data[self.parent().targetNamespace][key]
+
+    def __setitem__(self, key, item):
+        item.parent = weakref.ref(self)
+        self.list.append(item)
+        targetNamespace = getattr(item, 'targetNamespace', self.parent().targetNamespace)
+        if not self.data.has_key(targetNamespace):
+            self.data[targetNamespace] = {}
+        self.data[targetNamespace][key] = item
+
+    def __isSequence(self, key):
+        return (type(key) in (types.TupleType,types.ListType) and len(key) == 2)
+
+    def keys(self):
+        keys = []
+        for tns in self.data.keys():
+            keys.append(map(lambda i: (tns,self._func(i)), self.data[tns].values()))
+        return keys
 
     def items(self):
         return map(lambda i: (self._func(i), i), self.list)
