@@ -16,10 +16,22 @@ ident = "$Id$"
 
 import types, weakref, urllib, sys
 from threading import RLock
-from xml.dom.ext import SplitQName
 from xml.ns import SCHEMA, XMLNS, SOAP, WSDL
 from Utility import DOM, Collection
 from StringIO import StringIO
+try:
+    from xml.dom.ext import SplitQName
+except ImportError, ex:
+    def SplitQName(qname):
+        l = qname.split(':')
+        if len(l) == 1:
+            l.insert(0, None)
+        elif len(l) == 2:
+            if l[0] == 'xmlns':
+                l.reverse()
+        else:
+            return
+        return tuple(l)
 
 def GetSchema(component):
     """convience function for finding the parent XMLSchema instance.
