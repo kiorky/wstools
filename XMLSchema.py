@@ -488,10 +488,10 @@ class MarkerInterface:
         return isinstance(what, ModelGroupMarker)
 
     def isExtension(self, what):
-        return isinstance(what, ModelGroupMarker)
+        return isinstance(what, ExtensionMarker)
 
     def isRestriction(self, what):
-        return isinstance(what, ModelGroupMarker)
+        return isinstance(what, RestrictionMarker)
 
     def isSimple(self, what):
         return isinstance(what, SimpleMarker)
