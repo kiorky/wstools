@@ -476,7 +476,9 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS2004, None)
+                if not action:
+                    action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                 operation.setInput(message, name, docs, action)
 
             item = DOM.getElement(element, 'output', None, None)
@@ -485,7 +487,9 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS2004, None)
+                if not action:
+                    action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                 operation.setOutput(message, name, docs, action)
 
             for item in DOM.getElements(element, 'fault', None):
@@ -493,7 +497,9 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
+                action = DOM.getAttr(item, 'Action', WSA.ADDRESS2004, None)
+                if not action:
+                    action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                 operation.addFault(message, name, docs, action)
                 
 
