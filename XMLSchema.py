@@ -718,14 +718,15 @@ class XMLSchema(XMLSchemaComponent):
         """
         self.targetNamespace = None
         XMLSchemaComponent.__init__(self, parent)
-        self.includes = Collection(self)
-        self.imports = Collection(self)
-        self.elements = Collection(self)
-        self.types = Collection(self)
-        self.attr_decl = Collection(self)
-        self.attr_groups = Collection(self)
-        self.model_groups = Collection(self)
-        self.notations = Collection(self)
+        f = lambda k: k.attributes['name']
+        self.includes = Collection(self, key=f)
+        self.imports = Collection(self, key=f)
+        self.elements = Collection(self, key=f)
+        self.types = Collection(self, key=f)
+        self.attr_decl = Collection(self, key=f)
+        self.attr_groups = Collection(self, key=f)
+        self.model_groups = Collection(self, key=f)
+        self.notations = Collection(self, key=f)
 
         self._imported_schemas = {}
         self._included_schemas = {}

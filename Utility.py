@@ -555,10 +555,12 @@ DOM = DOM()
 
 class Collection(UserDict):
     """Helper class for maintaining ordered named collections."""
-    def __init__(self, parent):
+    default = lambda k: k.name
+    def __init__(self, parent, key=Collection.default):
         UserDict.__init__(self)
         self.parent = weakref.ref(parent)
         self.list = []
+        self._func = key
 
     def __getitem__(self, key):
         if type(key) is type(1):
@@ -571,10 +573,10 @@ class Collection(UserDict):
         self.data[key] = item
 
     def keys(self):
-        return map(lambda i: i.name, self.list)
+        return map(lambda i: self._func(i), self.list)
 
     def items(self):
-        return map(lambda i: (i.name, i), self.list)
+        return map(lambda i: (self._func(i), i), self.list)
 
     def values(self):
         return self.list
