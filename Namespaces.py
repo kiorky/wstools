@@ -93,13 +93,21 @@ class WSR:
     LIFETIME   = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ResourceLifetime"
 
 
-class WSA:
-    ADDRESS    = "http://schemas.xmlsoap.org/ws/2003/03/addressing"
-    ADDRESS2004    = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
+class WSA200408:
+    ADDRESS    = "http://schemas.xmlsoap.org/ws/2004/08/addressing"
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
-    ANONYMOUS2004  = "%s/role/anonymous" %ADDRESS2004
-    FAULT      = "http://schemas.xmlsoap.org/ws/2004/03/addressing/fault"
+    FAULT      = "%s/fault" %ADDRESS
+WSA = WSA200408
 
+class WSA200403:
+    ADDRESS    = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
+    ANONYMOUS  = "%s/role/anonymous" %ADDRESS
+    FAULT      = "%s/fault" %ADDRESS
+
+class WSA200303:
+    ADDRESS    = "http://schemas.xmlsoap.org/ws/2003/03/addressing"
+    ANONYMOUS  = "%s/role/anonymous" %ADDRESS
+    FAULT      = None
 
 class WSP:
     POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
