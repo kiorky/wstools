@@ -80,14 +80,16 @@ class SchemaReader:
         schema.load(reader)
         return schema
         
-    def loadFromStream(self, file):
+    def loadFromStream(self, file, url=None):
         """Return an XMLSchema instance loaded from a file object.
            file -- file object
+           url -- base location for resolving imports/includes.
         """
         reader = self.__readerClass()
         reader.loadDocument(file)
         schema = XMLSchema()
-        schema.setBaseUrl(self.__base_url)
+        if base is not None:
+             schema.setBaseUrl(base)
         schema.load(reader)
         self.__setIncludes(schema)
         self.__setImports(schema)
@@ -110,7 +112,7 @@ class SchemaReader:
             url = urllib.basejoin(self.__base_url,url)
         reader.loadFromURL(url)
         schema = XMLSchema()
-        schema.setBaseUrl(self.__base_url)
+        schema.setBaseUrl(url)
         schema.load(reader)
         self.__setIncludes(schema)
         self.__setImports(schema)
@@ -120,9 +122,14 @@ class SchemaReader:
         """Return an XMLSchema instance loaded from the given file.
            filename -- name of file to open
         """
+        if self.__base_url:
+            filename = urllib.basejoin(self.__base_url,filename)
         file = open(filename, 'rb')
-        try:     schema = self.loadFromStream(file)
-        finally: file.close()
+        try:
+            schema = self.loadFromStream(file, filename)
+        finally:
+            file.close()
+
         return schema
 
 
