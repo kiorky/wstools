@@ -7,11 +7,12 @@
 # WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
 # FOR A PARTICULAR PURPOSE.
 
+ident = "$Id$"
+
 from Utility import DOM, Collection
 from XMLSchema import XMLSchema
 from StringIO import StringIO
 import urllib
-
 
 class WSDLReader:
     """A WSDLReader creates WSDL instances from urls and xml data."""

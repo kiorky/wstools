@@ -7,6 +7,8 @@
 # WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
 # FOR A PARTICULAR PURPOSE.
 
+ident = "$Id$"
+
 import string, types, base64, re
 from Utility import DOM, Collection
 from StringIO import StringIO

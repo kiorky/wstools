@@ -12,6 +12,9 @@
 	Piers Lauder <piers@cs.su.oz.au>
 	Radovan Garabik <garabik@melkor.dnp.fmph.uniba.sk>
 """
+
+ident = "$Id$"
+
 import string, socket, select, errno
 
 WSAEINVAL = getattr(errno, 'WSAEINVAL', 10022)

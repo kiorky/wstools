@@ -13,6 +13,8 @@ Version 0.9.0
 
 """
 
+ident = "$Id$"
+
 from re import *
 
 

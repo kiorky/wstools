@@ -7,6 +7,8 @@
 # WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
 # FOR A PARTICULAR PURPOSE.
 
+ident = "$Id$"
+
 from string import join, strip, split
 from UserDict import UserDict
 from StringIO import StringIO
