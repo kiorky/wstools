@@ -709,6 +709,7 @@ class MessageRoleBinding(Element):
                     _class = SoapHeaderBinding
                 else:
                     _class = SoapHeaderFaultBinding
+                message = ParseQName(message, e)
                 ob = _class(message, part, use, namespace, encstyle)
                 self.addExtension(ob)
                 continue
