@@ -334,7 +334,7 @@ class XMLSchemaComponent(XMLBase):
                 ns = node.getNamespace(prefix)
                 if ns == XMLNS or prefix == 'xml':
                     self.attributes['xml'][k] = v
-                elif ns in XSDNS:
+                elif ns in SCHEMA.XSD_LIST:
                     self.attributes[value] = v
                 else:
                     raise SchemaError, 'attribute %s, namespace unknown' %k
@@ -516,8 +516,8 @@ class Notation(XMLSchemaComponent):
     attributes = {'id':None, 'name':None, 'public':None, 'system':None}
     contents = {'xsd':('annotation')}
 
-    def __init__(self):
-        XMLSchemaComponent.__init__(self)
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
 
     def fromDom(self, node):
@@ -583,8 +583,8 @@ class Annotation(XMLSchemaComponent):
         attributes = {'source':None, 'xml:lang':None}
         contents = {'xsd':('mixed', 'any')}
 
-        def __init__(self):
-            XMLSchemaComponent.__init__(self)
+        def __init__(self, parent):
+            XMLSchemaComponent.__init__(self, parent)
             self.content = None
 
         def fromDom(self, node):
@@ -617,8 +617,8 @@ class Annotation(XMLSchemaComponent):
         attributes = {'source':None, 'anyURI':None}
         contents = {'xsd':('mixed', 'any')}
 
-        def __init__(self):
-            XMLSchemaComponent.__init__(self)
+        def __init__(self, parent):
+            XMLSchemaComponent.__init__(self, parent)
             self.content = None
 
         def fromDom(self, node):
@@ -1150,8 +1150,8 @@ class AttributeReference(XMLSchemaComponent,\
         'fixed':None}
     contents = {'xsd':['annotation']}
 
-    def __init__(self, schemaEval):
-        XMLSchemaComponent.__init__(self)
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
 
     def fromDom(self, node):
@@ -1185,8 +1185,8 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
         'name':None}
     contents = {'xsd':['annotation']}
 
-    def __init__(self, schemaEval):
-        XMLSchemaComponent.__init__(self)
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
 
     def fromDom(self, node):
@@ -1249,8 +1249,8 @@ class IdentityConstrants(XMLSchemaComponent):
        selector -- XPath to selected nodes
        fields -- list of XPath to key field
     """
-    def __init__(self):
-        XMLSchemaComponent.__init__(self)
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
         self.selector = None
         self.fields = None
         self.annotation = None
@@ -1853,7 +1853,7 @@ class ComplexType(XMLSchemaComponent,\
             return
         component = SplitQName(contents[indx].getTagName())[1]
         if component == 'annotation':
-            self.annotation = Annotation()
+            self.annotation = Annotation(self)
             self.annotation.fromDom(contents[indx])
             indx += 1
             component = SplitQName(contents[indx].getTagName())[1]
@@ -1969,7 +1969,7 @@ class ComplexType(XMLSchemaComponent,\
                     return
                 component = SplitQName(contents[indx].getTagName())[1]
                 if component == 'annotation':
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(contents[indx])
                     indx += 1
                     component = SplitQName(contents[indx].getTagName())[1]
@@ -2081,7 +2081,7 @@ class ComplexType(XMLSchemaComponent,\
                 num = len(contents)
                 component = SplitQName(contents[indx].getTagName())[1]
                 if component == 'annotation':
-                    self.annotation = Annotation()
+                    self.annotation = Annotation(self)
                     self.annotation.fromDom(contents[indx])
                     indx += 1
                     component = SplitQName(contents[indx].getTagName())[1]
@@ -2195,7 +2195,7 @@ class SimpleType(XMLSchemaComponent,\
         for child in contents:
             component = SplitQName(child.getTagName())[1]
             if component == 'annotation':
-                self.annotation = Annotation()
+                self.annotation = Annotation(self)
                 self.annotation.fromDom(child)
             break
         else:
