@@ -2296,7 +2296,8 @@ class ComplexType(XMLSchemaComponent,\
                 elif component == 'anyAttribute':
                     self.attr_content.append(AttributeWildCard(self))
                 else:
-	            raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
+	            raise SchemaError, 'Unknown component (%s): %s' \
+                        %(contents[indx].getTagName(),self.getItemTrace())
                 self.attr_content[-1].fromDom(contents[indx])
                 indx += 1
 
