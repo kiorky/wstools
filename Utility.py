@@ -498,6 +498,8 @@ class DOM:
         DOCUMENT_NODE = node.DOCUMENT_NODE
         ELEMENT_NODE = node.ELEMENT_NODE
         while 1:
+            if node is None:
+                raise DOMException('Value for prefix %s not found.' % prefix)
             if node.nodeType != ELEMENT_NODE:
                 node = node.parentNode
                 continue
@@ -891,10 +893,17 @@ class ElementProxy(Base, MessageInterface):
         return self.canonicalize()
 
     def createDocument(self, namespaceURI, localName, doctype=None):
+        '''If specified must be a SOAP envelope, else may contruct an empty document.
+        '''
         prefix = self._soap_env_prefix
-        if namespaceURI != self.reserved_ns[prefix]:
+
+        if namespaceURI == self.reserved_ns[prefix]:
+            qualifiedName = '%s:%s' %(prefix,localName)
+        elif namespaceURI is localName is None:
+            self.node = self._dom.createDocument(None,None,None)
+            return
+        else:
             raise KeyError, 'only support creation of document in %s' %self.reserved_ns[prefix]
-        qualifiedName = '%s:%s' %(prefix,localName)
 
         document = self._dom.createDocument(nsuri=namespaceURI, qname=qualifiedName, doctype=doctype)
         self.node = document.childNodes[0]
@@ -922,7 +931,9 @@ class ElementProxy(Base, MessageInterface):
         value = localName
         if namespaceURI:
             value = '%s:%s' %(self.getPrefix(namespaceURI),localName)
-        self._setAttributeNS(self._xsi_nsuri, '%s:type' %self._xsi_prefix, value)
+
+        xsi_prefix = self.getPrefix(self._xsi_nsuri)
+        self._setAttributeNS(self._xsi_nsuri, '%s:type' %xsi_prefix, value)
 
     def createAttributeNS(self, namespace, name, value):
         document = self._getOwnerDocument()
