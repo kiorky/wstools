@@ -2318,9 +2318,9 @@ class ComplexType(XMLSchemaComponent,\
       
         indx = 0
         num = len(contents)
-        #XXX ugly
         if not num:
             return
+
         component = SplitQName(contents[indx].getTagName())[1]
         if component == 'annotation':
             self.annotation = Annotation(self)
@@ -2675,7 +2675,7 @@ class ComplexType(XMLSchemaComponent,\
                     elif component == 'anyAttribute':
                         content.append(AttributeWildCard(self))
                     elif component == 'simpleType':
-                        self.content.append(LocalSimpleType(self))
+                        self.content.append(AnonymousSimpleType(self))
                         self.content[-1].fromDom(contents[indx])
                     else:
 	                raise SchemaError, 'Unknown component (%s)'\
