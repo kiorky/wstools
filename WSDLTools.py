@@ -1065,17 +1065,17 @@ def callInfoFromWSDL(port, name):
     callinfo = SOAPCallInfo(name)
 
     addrbinding = port.getAddressBinding()
-    if not isinstance(addrbinding, WSDLTools.SoapAddressBinding):
+    if not isinstance(addrbinding, SoapAddressBinding):
         raise ValueError, 'Unsupported binding type.'        
     callinfo.location = addrbinding.location
 
-    soapbinding = binding.findBinding(WSDLTools.SoapBinding)
+    soapbinding = binding.findBinding(SoapBinding)
     if soapbinding is None:
         raise ValueError, 'Missing soap:binding element.'
     callinfo.transport = soapbinding.transport
     callinfo.style = soapbinding.style or 'document'
 
-    soap_op_binding = opbinding.findBinding(WSDLTools.SoapOperationBinding)
+    soap_op_binding = opbinding.findBinding(SoapOperationBinding)
     if soap_op_binding is not None:
         callinfo.soapAction = soap_op_binding.soapAction
         callinfo.style = soap_op_binding.style or callinfo.style
@@ -1086,11 +1086,11 @@ def callInfoFromWSDL(port, name):
         message = messages[operation.input.message]
         msgrole = opbinding.input
 
-        mime = msgrole.findBinding(WSDLTools.MimeMultipartRelatedBinding)
+        mime = msgrole.findBinding(MimeMultipartRelatedBinding)
         if mime is not None:
             raise ValueError, 'Mime bindings are not supported.'
         else:
-            for item in msgrole.findBindings(WSDLTools.SoapHeaderBinding):
+            for item in msgrole.findBindings(SoapHeaderBinding):
                 part = messages[item.message].parts[item.part]
                 header = callinfo.addInHeaderInfo(
                     part.name,
@@ -1100,7 +1100,7 @@ def callInfoFromWSDL(port, name):
                     )
                 header.encodingStyle = item.encodingStyle
 
-            body = msgrole.findBinding(WSDLTools.SoapBodyBinding)
+            body = msgrole.findBinding(SoapBodyBinding)
             if body is None:
                 raise ValueError, 'Missing soap:body binding.'
             callinfo.encodingStyle = body.encodingStyle
@@ -1125,11 +1125,11 @@ def callInfoFromWSDL(port, name):
         message = messages[operation.output.message]
         msgrole = opbinding.output
 
-        mime = msgrole.findBinding(WSDLTools.MimeMultipartRelatedBinding)
+        mime = msgrole.findBinding(MimeMultipartRelatedBinding)
         if mime is not None:
             raise ValueError, 'Mime bindings are not supported.'
         else:
-            for item in msgrole.findBindings(WSDLTools.SoapHeaderBinding):
+            for item in msgrole.findBindings(SoapHeaderBinding):
                 part = messages[item.message].parts[item.part]
                 header = callinfo.addOutHeaderInfo(
                     part.name,
@@ -1139,7 +1139,7 @@ def callInfoFromWSDL(port, name):
                     )
                 header.encodingStyle = item.encodingStyle
 
-            body = msgrole.findBinding(WSDLTools.SoapBodyBinding)
+            body = msgrole.findBinding(SoapBodyBinding)
             if body is None:
                 raise ValueError, 'Missing soap:body binding.'
             callinfo.encodingStyle = body.encodingStyle
