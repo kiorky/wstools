@@ -186,25 +186,11 @@ class WSDL:
         # Resolve (recursively) any import elements in the document.
         imported = {}
         base_location = self.location
-        while 1:
-            #XXX
-            imports = []
+        while len(DOM.getElements(definitions, 'import', NS_WSDL)):
             for element in DOM.getElements(definitions, 'import', NS_WSDL):
                 location = DOM.getAttr(element, 'location')
-                # Resolve relative location, and save
                 location = urllib.basejoin(base_location, location)
-
-                if not imported.has_key(location):
-                    imports.append(element)
-
-            if not imports:
-                break
-            for element in imports:
-                location = DOM.getAttr(element, 'location')
-                self._import(document, element, base_location)
-                location = urllib.basejoin(base_location, location)
-                imported[location] = 1
-            base_location = ''
+                self._import(self.document, element, base_location)
 
         #reader = SchemaReader(base_url=self.location)
         for element in DOM.getElements(definitions, None, None):
@@ -330,6 +316,9 @@ class WSDL:
             else:
                 imported_nodes = [imported]
             parent = element.parentNode
+
+            parent.removeChild(element)
+            
             for node in imported_nodes:
                 if node.nodeType != node.ELEMENT_NODE:
                     continue
