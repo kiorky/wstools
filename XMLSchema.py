@@ -105,8 +105,6 @@ class SchemaReader:
         """Return an XMLSchema instance loaded from the given url.
            url -- URL to dereference
         """
-        if not url.endswith('xsd'):
-            raise SchemaError, 'unknown file type %s' %url
         reader = self.__readerClass()
         if self.__base_url:
             url = urllib.basejoin(self.__base_url,url)

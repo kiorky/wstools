@@ -306,7 +306,6 @@ class WSDL:
             location = urllib.basejoin(base_location, location)
             element.setAttributeNS(None, 'location', location)
 
-        location = urllib.basejoin(self.location, location)
         obimport = self.addImport(namespace, location)
         obimport._loaded = 1
 
