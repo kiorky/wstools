@@ -2,7 +2,7 @@
 
 ############################################################################
 # Joshua R. Boverhof, David W. Robertson, LBNL
-# See Copyright for copyright notice!
+# See LBNLCopyright for copyright notice!
 ###########################################################################
 
 import unittest, sys, copy
@@ -44,27 +44,24 @@ class WSDLReaderTestCase(unittest.TestCase):
             wsdl = WSDLReader().loadFromFile(self.path)
 
 
-def makeTestSuite(topLevel=False, config=None):
+def makeTestSuite(section=None):
     global configLoader
 
     suite = unittest.TestSuite()
-    if not hasattr(sys.modules[__name__], "configLoader"):
-        if not config:
-            configLoader = utils.MatchTestLoader(False, "config.py",
-                                         "WSDLReaderTestCase")
-        else:
-            configLoader = config
-    configLoader.testMethodPrefix = "test"
-        # need to have as command-line argument
-    suite.addTest(configLoader.loadTestsFromConfig(WSDLReaderTestCase,
-                                                   "services_by_http"))
+    configLoader = utils.MatchTestLoader(False, "config.py", "WSDLReaderTestCase")
+    if not section:
+        found = configLoader.setSection(sys.argv)
+        if not found:
+            configLoader.setSection("services_by_http")
+    else:
+        configLoader.setSection(section)
+    suite.addTest(configLoader.loadTestsFromConfig(WSDLReaderTestCase))
     return suite
 
 
 def main():
-    global configLoader
-
-    configLoader = utils.MatchTestLoader(False, "config.py", "makeTestSuite")
-    unittest.main(defaultTest="makeTestSuite", testLoader=configLoader)
+    loader = utils.MatchTestLoader(False, None, "makeTestSuite")
+    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
                   
+
 if __name__ == "__main__" : main()
