@@ -780,9 +780,7 @@ class SoapBodyBinding:
         self.encodingStyle = encodingStyle
         self.namespace = namespace
         if type(parts) in (type(''), type(u'')):
-            raise WSDLError(
-                'The parts argument must be a sequence.'
-                )
+            parts = parts.split()
         self.parts = parts
         self.use = use
 
