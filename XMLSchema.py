@@ -2506,13 +2506,15 @@ class ComplexType(XMLSchemaComponent,\
 
                 indx = 0
                 num = len(contents)
-                component = SplitQName(contents[indx].getTagName())[1]
-                if component == 'annotation':
-                    self.annotation = Annotation(self)
-                    self.annotation.fromDom(contents[indx])
-                    indx += 1
-                    component = SplitQName(contents[indx].getTagName())[1]
 
+                if num:
+                    component = SplitQName(contents[indx].getTagName())[1]
+                    if component == 'annotation':
+                        self.annotation = Annotation(self)
+                        self.annotation.fromDom(contents[indx])
+                        indx += 1
+                        component = SplitQName(contents[indx].getTagName())[1]
+    
                 content = []
                 while indx < num:
                     component = SplitQName(contents[indx].getTagName())[1]
