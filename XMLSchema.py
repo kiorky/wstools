@@ -1375,7 +1375,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
         content = []
 
         for indx in range(len(contents)):
-            component = SplitQName(i.getTagName())[1]
+            component = SplitQName(contents[indx].getTagName())[1]
             if (component == 'annotation') and (not indx):
                 self.annotation = Annotation(self)
                 self.annotation.fromDom(contents[indx])
@@ -1394,7 +1394,7 @@ class AttributeGroupDefinition(XMLSchemaComponent,\
                 content.append(AttributeWildCard())
                 content[-1].fromDom(contents[indx])
             else:
-                raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
+                raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
 
         self.attr_content = tuple(content)
 
@@ -1999,13 +1999,17 @@ class ModelGroupReference(XMLSchemaComponent,\
        attributes:
            id -- ID
            ref -- NCName,  required
+           minOccurs -- Whole Number, 1
+           maxOccurs -- (Whole Number | 'unbounded'), 1
 
        contents:
            annotation?
     """
     required = ['ref']
     attributes = {'id':None, 
-        'ref':None}
+        'ref':None,
+        'minOccurs':'1',
+        'maxOccurs':'1'}
     contents = {'xsd':['annotation']}
 
     def __init__(self, parent):
@@ -2413,6 +2417,7 @@ class SimpleType(XMLSchemaComponent,\
             if component == 'annotation':
                 self.annotation = Annotation(self)
                 self.annotation.fromDom(child)
+                continue
             break
         else:
             return
@@ -2423,7 +2428,7 @@ class SimpleType(XMLSchemaComponent,\
         elif component == 'union':
             self.content = self.__class__.Union(self)
         else:
-            raise SchemaError, 'Unknown component (%s)' %(contents[indx].getTagName())
+            raise SchemaError, 'Unknown component (%s)' %(component)
         self.content.fromDom(child)
 
     class Restriction(XMLSchemaComponent,\
