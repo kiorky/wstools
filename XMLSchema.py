@@ -529,6 +529,9 @@ class MarkerInterface:
     def isAttributeGroup(self):
         return isinstance(self, AttributeGroupMarker)
 
+    def isElement(self):
+        return isinstance(self, ElementMarker)
+
     def isReference(self):
         return isinstance(self, ReferenceMarker)
 
@@ -1570,10 +1573,7 @@ class ElementDeclaration(XMLSchemaComponent,\
         self.constraints = tuple(constraints)
 
 
-class LocalElementDeclaration(ElementDeclaration,\
-                              MarkerInterface,\
-                              ElementMarker,\
-                              DeclarationMarker):
+class LocalElementDeclaration(ElementDeclaration):
     """<element>
        parents:
            all, choice, sequence
@@ -1607,7 +1607,7 @@ class LocalElementDeclaration(ElementDeclaration,\
         'keyref', 'unique']}
 
 
-class ElementReference(ElementDeclaration,\
+class ElementReference(XMLSchemaComponent,\
                        MarkerInterface,\
                        ElementMarker,\
                        ReferenceMarker):
@@ -1629,11 +1629,24 @@ class ElementReference(ElementDeclaration,\
         'maxOccurs':'1'}
     contents = {'xsd':['annotation']}
 
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
+        self.annotation = None
  
+    def fromDom(self, node):
+        self.annotation = None
+        self.setAttributes(node)
+        for i in self.getContents(node):
+            component = SplitQName(i.getTagName())[1]
+            if component in self.__class__.contents['xsd']:
+                if component == 'annotation' and not self.annotation:
+                    self.annotation = Annotation(self)
+                    self.annotation.fromDom(i)
+                else:
+	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
+
+
 class ElementWildCard(LocalElementDeclaration,\
-                      MarkerInterface,\
-                      ElementMarker,\
-                      DeclarationMarker,\
                       WildCardMarker):
     """<any>
        parents: 
@@ -1655,6 +1668,22 @@ class ElementWildCard(LocalElementDeclaration,\
         'namespace':'##any',
         'processContents':'strict'}
     contents = {'xsd':['annotation']}
+
+    def __init__(self, parent):
+        XMLSchemaComponent.__init__(self, parent)
+        self.annotation = None
+
+    def fromDom(self, node):
+        self.annotation = None
+        self.setAttributes(node)
+        for i in self.getContents(node):
+            component = SplitQName(i.getTagName())[1]
+            if component in self.__class__.contents['xsd']:
+                if component == 'annotation' and not self.annotation:
+                    self.annotation = Annotation(self)
+                    self.annotation.fromDom(i)
+                else:
+	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
 
 
 ######################################################
