@@ -10,17 +10,41 @@
 ident = "$Id$"
 
 import types
+import string, httplib, smtplib, urllib, socket, weakref
+import xml.dom.minidom
 from string import join, strip, split
 from UserDict import UserDict
 from StringIO import StringIO
-import xml.dom.minidom, weakref
-
-import string, httplib, smtplib, urllib, socket
 from TimeoutSocket import TimeoutSocket, TimeoutError
-from StringIO import StringIO
 from urlparse import urlparse
 from httplib import HTTPConnection, HTTPSConnection
 from exceptions import Exception
+
+try:
+    from xml.dom.ext import SplitQName
+except:
+    def SplitQName(qname):
+        '''SplitQName(qname) -> (string, string)
+        
+           Split Qualified Name into a tuple of len 2, consisting 
+           of the prefix and the local name.  
+    
+           (prefix, localName)
+        
+           Special Cases:
+               xmlns -- (localName, 'xmlns')
+               None -- (None, localName)
+        '''
+        
+        l = qname.split(':')
+        if len(l) == 1:
+            l.insert(0, None)
+        elif len(l) == 2:
+            if l[0] == 'xmlns':
+                l.reverse()
+        else:
+            return
+        return tuple(l)
 
 class RecursionError(Exception):
     """Used to indicate a HTTP redirect recursion."""

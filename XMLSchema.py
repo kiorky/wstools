@@ -16,40 +16,9 @@ ident = "$Id$"
 
 import types, weakref, urllib, sys
 from threading import RLock
-try:
-    from xml.ns import XMLNS
-except ImportError:
-    # ref:
-    # http://cvs.sourceforge.net/viewcvs.py/pyxml/xml/xml/ns.py?view=markup
-    class XMLNS:
-        """XMLNS, Namespaces in XML
-
-        XMLNS (14-Jan-1999) is a W3C Recommendation.  It is specified in
-        http://www.w3.org/TR/REC-xml-names
-            BASE -- the basic namespace defined by the specification
-            XML -- the namespace for XML 1.0
-            HTML -- the namespace for HTML4.0
-        """
-
-        BASE        = "http://www.w3.org/2000/xmlns/"
-        XML         = "http://www.w3.org/XML/1998/namespace"
-        HTML        = "http://www.w3.org/TR/REC-html40"
-
-from Utility import DOM, DOMException, Collection
+from Namespaces import XMLNS
+from Utility import DOM, DOMException, Collection, SplitQName
 from StringIO import StringIO
-try:
-    from xml.dom.ext import SplitQName
-except ImportError, ex:
-    def SplitQName(qname):
-        l = qname.split(':')
-        if len(l) == 1:
-            l.insert(0, None)
-        elif len(l) == 2:
-            if l[0] == 'xmlns':
-                l.reverse()
-        else:
-            return
-        return tuple(l)
 
 def GetSchema(component):
     """convience function for finding the parent XMLSchema instance.
