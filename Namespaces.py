@@ -80,7 +80,9 @@ class WSR:
 
 class WSA:
     ADDRESS    = "http://schemas.xmlsoap.org/ws/2003/03/addressing"
+    ADDRESS2004    = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
+    ANONYMOUS2004  = "%s/role/anonymous" %ADDRESS2004
     FAULT      = "http://schemas.xmlsoap.org/ws/2004/03/addressing/fault"
 
 class WSP:
