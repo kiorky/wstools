@@ -1,0 +1,30 @@
+Two top level modules have been provided to run the tests. "test_wstools.py" is used
+to run all of the local tests. "test_wstools_net.py" is used to run all of the 
+tests that require network access.
+
+TESTS:
+    test_t1 -- Basic test, just checks that wsdl and xsd objects are in the
+	right places.
+
+
+CONTENTS OF SAMPLE WSDL/XSD:
+    schema -- Taken from globus-3.0.1(http://www.globus.org)
+    xmethods -- Taken from XMethods(http://www.xmethods.com)
+         airport.wsdl
+         AmazonWebServices.wsdl
+         books.wsdl
+         Distance.wsdl
+         freedb.wsdl
+         globalweather.wsdl
+         IHaddock.wsdl
+         ip2geo.wsdl
+         magic.wsdl
+         query.wsdl
+         RateInfo.wsdl
+         SHA1Encrypt.wsdl
+         siteInspect.wsdl
+         TemperatureService.wsdl
+         usweather.wsdl
+         zip2geo.wsdl
+
+
