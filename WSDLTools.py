@@ -27,7 +27,7 @@ class WSDLReader:
         wsdl = WSDL()
         if name:
             wsdl.location = name
-        else:
+        elif hasattr(file, 'name'):
             wsdl.location = file.name
         wsdl.load(document)
         return wsdl
