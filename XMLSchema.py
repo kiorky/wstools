@@ -108,6 +108,7 @@ class SchemaReader:
         reader = self.__readerClass()
         if self.__base_url:
             url = basejoin(self.__base_url,url)
+
         reader.loadFromURL(url)
         schema = XMLSchema()
         schema.setBaseUrl(url)
@@ -900,9 +901,10 @@ class XMLSchema(XMLSchemaComponent):
         'elementFormDefault':'unqualified',
         'blockDefault':None,
         'finalDefault':None}
-    contents = {'xsd':('include', 'import', 'redefine', 'annotation', 'attribute',\
-                'attributeGroup', 'complexType', 'element', 'group',\
-                'notation', 'simpleType', 'annotation')}
+    contents = {'xsd':('include', 'import', 'redefine', 'annotation',
+                       'attribute', 'attributeGroup', 'complexType',
+                       'element', 'group', 'notation', 'simpleType',
+                       'annotation')}
     empty_namespace = ''
     tag = 'schema'
 
@@ -1042,7 +1044,7 @@ class XMLSchema(XMLSchemaComponent):
         """
         return self.attributes.get('finalDefault')
 
-    def load(self, node):
+    def load(self, node, location=None):
         self.__node = node
 
         pnode = node.getParentNode()
@@ -1078,12 +1080,10 @@ class XMLSchema(XMLSchemaComponent):
 
                 self.includes[sl] = tp
 
-                # This is the test code
                 pn = childNode.getParentNode().getNode()
                 pn.removeChild(childNode.getNode())
                 for child in schema.getNode().getNode().childNodes:
                     pn.appendChild(child.cloneNode(1))
-                # end of test code
 
                 for collection in ['imports','elements','types',
                                    'attr_decl','attr_groups','model_groups',
@@ -1733,19 +1733,21 @@ class ElementDeclaration(XMLSchemaComponent,\
         self.constraints = ()
 
     def isQualified(self):
-        '''Global elements are always qualified.
-        '''
+        """
+Global elements are always qualified.
+        """
         return True
 
     def getElementDeclaration(self, attribute):
         raise Warning, 'invalid operation for <%s>' %self.tag
 
     def getTypeDefinition(self, attribute=None):
-        '''If attribute is None, "type" is assumed, return the corresponding
+        """
+If attribute is None, "type" is assumed, return the corresponding
         representation of the global type definition (TypeDefinition),
         or the local definition if don't find "type".  To maintain backwards
         compat, if attribute is provided call base class method.
-        '''
+        """
         if attribute:
             return XMLSchemaComponent.getTypeDefinition(self, attribute)
         gt = XMLSchemaComponent.getTypeDefinition(self, 'type')
@@ -1827,10 +1829,11 @@ class LocalElementDeclaration(ElementDeclaration,\
         'keyref', 'unique']}
 
     def isQualified(self):
-        '''Local elements can be qualified or unqualifed according
+        """
+Local elements can be qualified or unqualifed according
         to the attribute form, or the elementFormDefault.  By default
         local elements are unqualified.
-        '''
+        """
         form = self.getAttribute('form')
         if form == 'qualified':
             return True
@@ -1866,10 +1869,10 @@ class ElementReference(XMLSchemaComponent,\
         self.annotation = None
 
     def getElementDeclaration(self, attribute=None):
-        '''If attribute is None, "ref" is assumed, return the corresponding
+        """If attribute is None, "ref" is assumed, return the corresponding
         representation of the global element declaration (ElementDeclaration),
         To maintain backwards compat, if attribute is provided call base class method.
-        '''
+        """
         if attribute:
             return XMLSchemaComponent.getElementDeclaration(self, attribute)
         return XMLSchemaComponent.getElementDeclaration(self, 'ref')
@@ -1887,8 +1890,7 @@ class ElementReference(XMLSchemaComponent,\
 	            raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
 
 
-class ElementWildCard(LocalElementDeclaration,\
-                      WildCardMarker):
+class ElementWildCard(LocalElementDeclaration, WildCardMarker):
     """<any>
        parents: 
            choice, sequence
@@ -1916,13 +1918,14 @@ class ElementWildCard(LocalElementDeclaration,\
         self.annotation = None
 
     def isQualified(self):
-        '''Global elements are always qualified, but if processContents
+        """
+        Global elements are always qualified, but if processContents
         are not strict could have dynamically generated local elements.
-        '''
+        """
         return GetSchema(self).isElementFormDefaultQualified()
 
     def getTypeDefinition(self, attribute):
-        raise Warning, 'invalid operation for <%s>' %self.tag
+        raise Warning, 'invalid operation for <%s>' % self.tag
 
     def fromDom(self, node):
         self.annotation = None
@@ -2800,10 +2803,11 @@ class SimpleType(XMLSchemaComponent,\
             return self.attributes.get('itemType')
 
         def getTypeDefinition(self, attribute='itemType'):
-            '''return the type refered to by itemType attribute or
+            """
+            return the type refered to by itemType attribute or
             the simpleType content.  If returns None, then the 
             type refered to by itemType is primitive.
-            '''
+            """
             tp = XMLSchemaComponent.getTypeDefinition(self, attribute)
             return tp or self.content
 

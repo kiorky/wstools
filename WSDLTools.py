@@ -197,9 +197,10 @@ class WSDL:
             do_it = False
             for element in DOM.getElements(definitions, 'import', NS_WSDL):
                 location = DOM.getAttr(element, 'location')
+
                 if base_location is not None:
                     location = basejoin(base_location, location)
-
+                    
                 if location not in imported:
                     do_it = True
                     self._import(document, element, base_location)
@@ -219,9 +220,11 @@ class WSDL:
 
             if not DOM.nsUriMatch(element.namespaceURI, NS_WSDL):
                 if localName == 'schema':
-                    reader = SchemaReader(base_url=self.location)
-                    schema = reader.loadFromNode(WSDLToolsAdapter(self), element)
-                    schema.setBaseUrl(self.location)
+                    tns = DOM.getAttr(element, 'targetNamespace')
+                    reader = SchemaReader(base_url=self.imports[tns].location)
+                    schema = reader.loadFromNode(WSDLToolsAdapter(self),
+                                                 element)
+#                    schema.setBaseUrl(self.location)
                     self.types.addSchema(schema)
                 else:
                     self.extensions.append(element)
