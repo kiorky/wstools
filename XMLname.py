@@ -7,7 +7,7 @@ Appendix A of "SOAP Version 1.2 Part 2: Adjuncts", W3C Working Draft
 
 Also see <http://www.w3.org/2000/xp/Group/xmlp-issues>.
 
-Author: Gregory R. Warnes <gregory_r_warnes@groton.pfizer.com>
+Author: Gregory R. Warnes <Gregory.R.Warnes@Pfizer.com>
 Date::  2002-04-25
 Version 0.9.0
 
