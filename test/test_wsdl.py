@@ -1,49 +1,37 @@
 #!/usr/bin/env python
-import unittest, sys
-from ConfigParser import NoOptionError
-from ZSI.wstools.WSDLTools  import WSDLReader
-from ZSI.wstools.Utility import DOM
 
-CONFIG = None
-NETWORK = 'services_by_http'
-STANDALONE = 'services_by_file'
+############################################################################
+# Joshua R. Boverhof, David W. Robertson, LBNL
+# See LBNLCopyright for copyright notice!
+###########################################################################
+
+import sys, unittest
+from ZSI.wstools.Utility import DOM
+import utils
 
 class WSDLToolsTestCase(unittest.TestCase):
+
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
 
     def setUp(self):
-        pass
+        global configLoader
 
-    def tearDown(self):
-        if self.wsdl:
-            self.wsdlServices()
-            self.wsdlMessages()
-            self.wsdlPortTypes()
-            self.wsdlBindings()
-            self.wsdlImports()
-            self.wsdlExtensions()
-            self.wsdlTypes()
+            # not thread safe
+        self.path = configLoader.nameGenerator.next()
+        print self.path
+        sys.stdout.flush()
 
-    def loadFromConfig(self, config=CONFIG):
-        self.wsdl = None
-        try:
-            path = config.get(self.section, self.option)
-        except NoOptionError, ex:
-            pass
+    def __str__(self):
+        teststr = unittest.TestCase.__str__(self)
+        if hasattr(self, "path"):
+            return "%s: %s" % (teststr, self.path )
         else:
-            if path[:7] == 'http://':
-                self.loadFromURL(url=path)
-            else:
-                self.loadFromFile(file=path)
- 
-    def loadFromFile(self, file):
-        self.wsdl = WSDLReader().loadFromFile(file)
-
-    def loadFromURL(self, url):
-        self.wsdl = WSDLReader().loadFromURL(url)
+            return "%s" % (teststr)
 
     def checkWSDLCollection(self, tag_name, component, key='name'):
+        if self.wsdl is None:
+            return
         definition = self.wsdl.document.documentElement
         version = DOM.WSDLUriToVersion(definition.namespaceURI)
         nspname = DOM.GetWSDLUri(version)
@@ -57,39 +45,63 @@ class WSDLToolsTestCase(unittest.TestCase):
             name = DOM.getAttr(cnode, key)
             component[name] 
 
-    def wsdlServices(self):
-        self.checkWSDLCollection('service', self.wsdl.services)
+    def wsdlTestAll(self):
+        try:
+            self.wsdl = utils.setUpWsdl(self.path)
+        except:
+            self.path = self.path + ": load failed, unable to start"
+            raise
 
-    def wsdlMessages(self): 
-        self.checkWSDLCollection('message', self.wsdl.messages)
+        try:
+            self.checkWSDLCollection('service', self.wsdl.services)
+        except:
+            self.path = self.path + ": wsdl.services"
+            raise
 
-    def wsdlPortTypes(self):
-        self.checkWSDLCollection('portType', self.wsdl.portTypes)
+        try:
+            self.checkWSDLCollection('message', self.wsdl.messages)
+        except:
+            self.path = self.path + ": wsdl.messages"
+            raise
 
-    def wsdlBindings(self):
-        self.checkWSDLCollection('binding', self.wsdl.bindings)
+        try:
+            self.checkWSDLCollection('portType', self.wsdl.portTypes)
+        except:
+            self.path = self.path + ": wsdl.portTypes"
+            raise
 
-    def wsdlImports(self):
-        self.checkWSDLCollection('import', self.wsdl.imports, key='namespace')
+        try:
+            self.checkWSDLCollection('binding', self.wsdl.bindings)
+        except:
+            self.path = self.path + ": wsdl.bindings"
+            raise
 
-    def wsdlTypes(self):
-        for key in self.wsdl.types.keys(): 
-            schema = self.wsdl.types[key]
-            self.failUnlessEqual(key, schema.getTargetNamespace())
+        try:
+            self.checkWSDLCollection('import', self.wsdl.imports, key='namespace')
+        except:
+            self.path = self.path + ": wsdl.imports"
+            raise
 
-        definition = self.wsdl.document.documentElement
-        version = DOM.WSDLUriToVersion(definition.namespaceURI)
-        nspname = DOM.GetWSDLUri(version)
-        for node in DOM.getElements(definition, 'types', nspname):
-            for snode in DOM.getElements(node, 'schema'):
-                tns = DOM.findTargetNS(snode)
-                schema = self.wsdl.types[tns]
-                self.schemaAttributesDeclarations(schema, snode)
-                self.schemaAttributeGroupDeclarations(schema, snode)
-                self.schemaElementDeclarations(schema, snode)
-                self.schemaTypeDefinitions(schema, snode)
+        try:
+            for key in self.wsdl.types.keys(): 
+                schema = self.wsdl.types[key]
+                self.failUnlessEqual(key, schema.getTargetNamespace())
 
-    def wsdlExtensions(self):
+            definition = self.wsdl.document.documentElement
+            version = DOM.WSDLUriToVersion(definition.namespaceURI)
+            nspname = DOM.GetWSDLUri(version)
+            for node in DOM.getElements(definition, 'types', nspname):
+                for snode in DOM.getElements(node, 'schema'):
+                    tns = DOM.findTargetNS(snode)
+                    schema = self.wsdl.types[tns]
+                    self.schemaAttributesDeclarations(schema, snode)
+                    self.schemaAttributeGroupDeclarations(schema, snode)
+                    self.schemaElementDeclarations(schema, snode)
+                    self.schemaTypeDefinitions(schema, snode)
+        except:
+            self.path = self.path + ": wsdl.types"
+            raise
+
         if self.wsdl.extensions:
             print 'No check for WSDLTools(%s) Extensions:' %(self.wsdl.name)
             for ext in self.wsdl.extensions: print '\t', ext
@@ -108,30 +120,25 @@ class WSDLToolsTestCase(unittest.TestCase):
         self.checkXSDCollection('simpleType', schema.types, node)
 
 
-def makeNetworkSuite():
-    return getSuite(section='services_by_http')
+def makeTestSuite(section=None):
+    global configLoader
 
-def makeStandAloneSuite():
-    return getSuite('services_by_file')
-
-def getSuite(section):
-    names = CONFIG.options(section)
-    tests = []
     suite = unittest.TestSuite()
-    loader = unittest.TestLoader()
-
-    WSDLToolsTestCase.section = section
-    for case in [WSDLToolsTestCase,]:
-        case.section = section
-        test = loader.loadTestsFromTestCase(case)
-        tests.append(test)
-    #tests.sort()
-    suite.addTests(tests)
+    configLoader = utils.MatchTestLoader(False, "config.py", "WSDLToolsTestCase")
+    if not section:
+        found = configLoader.setSection(sys.argv)
+        if not found:
+            configLoader.setSection("services_by_http")
+    else:
+        configLoader.setSection(section)
+    configLoader.testMethodPrefix = "wsdlTest"
+    suite.addTest(configLoader.loadTestsFromConfig(WSDLToolsTestCase))
     return suite
 
-#makeTestSuite = makeStandAloneSuite
-#def main():
-#    unittest.main(defaultTest="makeTestSuite")
 
+def main():
+    loader = utils.MatchTestLoader(False, None, "makeTestSuite")
+    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
+                  
 
 if __name__ == "__main__" : main()

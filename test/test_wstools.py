@@ -1,23 +1,39 @@
 #!/usr/bin/env python
+
+############################################################################
+# Joshua R. Boverhof, David W. Robertson, LBNL
+# See LBNLCopyright for copyright notice!
+###########################################################################
+
 import unittest, tarfile, os, ConfigParser
-import test_t1
+import test_wsdl
+import utils
+
 
 SECTION='files'
 CONFIG_FILE = 'config.py'
 
-def main():
+def extractFiles(section, option):
     config = ConfigParser.ConfigParser()
     config.read(CONFIG_FILE)
-    archives = config.get(SECTION, 'archives')
+    archives = config.get(section, option)
     archives = eval(archives)
-    test_t1.CONFIG = config 
     for file in archives:
         tar = tarfile.open(file)
         if not os.access(tar.membernames[0], os.R_OK):
             for i in tar.getnames(): 
                 tar.extract(i)
 
-    unittest.TestProgram(defaultTest='test_t1.makeStandAloneSuite')
+def makeTestSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(test_wsdl.makeTestSuite("services_by_file"))
+    return suite
 
+def main():
+    extractFiles(SECTION, 'archives')
+    loader = utils.MatchTestLoader(True, None, "makeTestSuite")
+    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
 
 if __name__ == "__main__" : main()
+    
+

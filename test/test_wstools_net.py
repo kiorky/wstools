@@ -1,14 +1,22 @@
 #!/usr/bin/env python
-import unittest, tarfile, os, ConfigParser
-import test_t1
 
-CONFIG_FILE = 'config.py'
+############################################################################
+# Joshua R. Boverhof, David W. Robertson, LBNL
+# See LBNLCopyright for copyright notice!
+###########################################################################
+import unittest
+import test_wsdl
+import utils
+
+def makeTestSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(test_wsdl.makeTestSuite(("no_schemas", "simpleTypes", "services_by_http")))
+    return suite
 
 def main():
-    config = ConfigParser.ConfigParser()
-    config.read(CONFIG_FILE)
-    test_t1.CONFIG = config 
-    unittest.TestProgram(defaultTest='test_t1.makeNetworkSuite')
-
+    loader = utils.MatchTestLoader(True, None, "makeTestSuite")
+    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
 
 if __name__ == "__main__" : main()
+    
+
