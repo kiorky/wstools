@@ -71,7 +71,9 @@ def toXMLname(string):
             X.append(_toUnicodeHex(T[i]))
         else:
             X.append(T[i])
-
+    
+    if prefix:
+        return "%s:%s" % (prefix, u''.join(X))
     return u''.join(X)
 
 
