@@ -438,6 +438,26 @@ class Message(Element):
             if elemref is not None:
                 part.element = ParseTypeRef(elemref, element)
 
+    def getElementDeclaration(self):
+        """Return the XMLSchema.ElementDeclaration instance or None"""
+        element = None
+        if self.element:
+            nsuri,name = self.element
+            wsdl = self.getWSDL()
+            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].elements.has_key(name):
+                element = wsdl.types[nsuri].elements[name]
+        return element
+
+    def getTypeDefinition(self):
+        """Return the XMLSchema.TypeDefinition instance or None"""
+        type = None
+        if self.type:
+            nsuri,name = self.type
+            wsdl = self.getWSDL()
+            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].types.has_key(name):
+                type = wsdl.types[nsuri].types[name]
+        return type
+
     def getWSDL(self):
         """Return the WSDL object that contains this Message Part."""
         return self.parent().parent()
@@ -680,6 +700,13 @@ class MessageRole(Element):
         if self.parent().getWSDL() == 'fault':
             return self.parent().parent().getWSDL()
         return self.parent().getWSDL()
+
+    def getMessage(self):
+        """Return the WSDL object that represents the attribute message 
+        (namespaceURI, name) tuple
+        """
+        wsdl = self.getWSDL()
+        return wsdl.messages[self.message]
 
     def toDom(self, node):
         wsdl = self.getWSDL()
@@ -1040,7 +1067,7 @@ class Port(Element):
 
     def getAddressBinding(self):
         """A convenience method to obtain the extension element used
-           as the address binding for the port, or None if undefined."""
+           as the address binding for the port."""
         for item in self.extensions:
             if isinstance(item, SoapAddressBinding) or \
                isinstance(item, HttpAddressBinding):
@@ -1577,13 +1604,6 @@ def callInfoFromWSDL(port, name):
                 parts = message.parts.values()
 
             if parts:
-                # XXX no idea what this is for, but it breaks everything. jrb
-                #callinfo.setReturnParameter(
-                #    parts[0].name,
-                #    parts[0].element or parts[0].type,
-                #    element_type = parts[0].element and 1 or 0
-                #    )
-                #for part in parts[1:]:
                 for part in parts:
                     callinfo.addOutParameter(
                         part.name,

@@ -16,6 +16,9 @@ class ILogger:
         return
     def error(self, *args):
         return
+    def setLevel(cls, level):
+        cls.level = level
+    setLevel = classmethod(setLevel)
 _LoggerClass = ILogger
 
 
@@ -24,10 +27,12 @@ class BasicLogger(ILogger):
         self.msg, self.out = msg, out
 
     def warning(self, msg, *args):
+        if self.level < 1: return
         print >>self, self.WARN, self.msg,
         print >>self, msg %args
     WARN = 'WARN'
     def debug(self, msg, *args):
+        if self.level < 2: return
         print >>self, self.DEBUG, self.msg,
         print >>self, msg %args
     DEBUG = 'DEBUG'
@@ -43,9 +48,22 @@ class BasicLogger(ILogger):
 
 
 def setBasicLogger():
+    '''Use Basic Logger. 
+    '''
+    setLoggerClass(BasicLogger)
+    BasicLogger.setLevel(0)
+
+def setBasicLoggerWARN():
     '''Use Basic Logger.
     '''
     setLoggerClass(BasicLogger)
+    BasicLogger.setLevel(1)
+
+def setBasicLoggerDEBUG():
+    '''Use Basic Logger.
+    '''
+    setLoggerClass(BasicLogger)
+    BasicLogger.setLevel(2)
 
 def setLoggerClass(loggingClass):
     '''Set Logging Class.

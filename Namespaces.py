@@ -28,6 +28,7 @@ except:
         BIND_HTTP   = "http://schemas.xmlsoap.org/wsdl/http/"
         BIND_MIME   = "http://schemas.xmlsoap.org/wsdl/mime/"
         BIND_SOAP   = "http://schemas.xmlsoap.org/wsdl/soap/"
+        BIND_SOAP12 = "http://schemas.xmlsoap.org/wsdl/soap12/"
 
     class XMLNS:
         BASE        = "http://www.w3.org/2000/xmlns/"
