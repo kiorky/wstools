@@ -203,6 +203,9 @@ class DOMAdapter(DOMAdapterInterface):
             self.__node = node
         self.__attributes = None
 
+    def getNode(self):
+        return self.__node
+    
     def hasattr(self, attr, ns=None):
         """attr -- attribute 
            ns -- optional namespace, None means unprefixed attribute.
@@ -918,6 +921,7 @@ class XMLSchema(XMLSchemaComponent):
            notations -- collection of notations
 
         """
+        self.__node = None
         self.targetNamespace = None
         XMLSchemaComponent.__init__(self, parent)
         f = lambda k: k.attributes['name']
@@ -936,6 +940,12 @@ class XMLSchema(XMLSchemaComponent):
         self._included_schemas = {}
         self._base_url = None
 
+    def getNode(self):
+        """
+        Interacting with the underlying DOM tree.
+        """
+        return self.__node
+    
     def addImportSchema(self, schema):
         """for resolving import statements in Schema instance
            schema -- schema instance
@@ -1028,6 +1038,8 @@ class XMLSchema(XMLSchemaComponent):
         return self.attributes.get('finalDefault')
 
     def load(self, node):
+        self.__node = node
+
         pnode = node.getParentNode()
         if pnode:
             pname = SplitQName(pnode.getTagName())[1]
@@ -1045,107 +1057,89 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
 
         self.targetNamespace = self.getTargetNamespace()
-        contents = self.getContents(node)
 
-        indx = 0
-        num = len(contents)
-        while indx < num:
-            while indx < num:
-                node = contents[indx]
-                component = SplitQName(node.getTagName())[1]
+        for childNode in self.getContents(node):
+            component = SplitQName(childNode.getTagName())[1]
+                
+            if component == 'include':
+                tp = self.__class__.Include(self)
+                tp.fromDom(childNode)
 
-                if component == 'include':
-                    tp = self.__class__.Include(self)
-                    tp.fromDom(node)
-                    self.includes[tp.attributes['schemaLocation']] = tp
+                sl = tp.attributes['schemaLocation']
+                schema = tp.getSchema()
 
-                    schema = tp.getSchema()
-                    if schema.targetNamespace and \
-                        schema.targetNamespace != self.targetNamespace:
-                        raise SchemaError, 'included schema bad targetNamespace'
+                if not self.getIncludeSchemas().has_key(sl):
+                    self.addIncludeSchema(sl, schema)
 
-                    for collection in ['imports','elements','types',\
-                        'attr_decl','attr_groups','model_groups','notations']:
-                        for k,v in getattr(schema,collection).items():
-                            if not getattr(self,collection).has_key(k):
-                                v._parent = weakref.ref(self)
-                                getattr(self,collection)[k] = v
+                self.includes[sl] = tp
 
-                elif component == 'import':
-                    tp = self.__class__.Import(self)
-                    tp.fromDom(node)
-                    import_ns = tp.getAttribute('namespace')
-                    if import_ns:
-                        if import_ns == self.targetNamespace:
-                            raise SchemaError,\
-                                'import and schema have same targetNamespace'
-                        self.imports[import_ns] = tp
-                    else:
-                        self.imports[self.__class__.empty_namespace] = tp
+                # This is the test code
+                pn = childNode.getParentNode().getNode()
+                pn.removeChild(childNode.getNode())
+                for child in schema.getNode().getNode().childNodes:
+                    pn.appendChild(child.cloneNode(1))
+                # end of test code
 
-                    if not self.getImportSchemas().has_key(import_ns) and\
+                for collection in ['imports','elements','types',
+                                   'attr_decl','attr_groups','model_groups',
+                                   'notations']:
+                    for k,v in getattr(schema,collection).items():
+                        if not getattr(self,collection).has_key(k):
+                            v._parent = weakref.ref(self)
+                            getattr(self,collection)[k] = v
+                        else:
+                            print "Warning: Not keeping schema component."
+
+            elif component == 'import':
+                tp = self.__class__.Import(self)
+                tp.fromDom(childNode)
+
+                import_ns = tp.getAttribute('namespace') or \
+                            self.__class__.empty_namespace
+
+                if not self.getImportSchemas().has_key(import_ns) and \
                        tp.getAttribute('schemaLocation'):
-                        self.addImportSchema(tp.getSchema())
+                    self.addImportSchema(tp.getSchema())
 
-                elif component == 'redefine':
-                    #print_debug('class %s, redefine skipped' %self.__class__, 5)
-                    pass
-                elif component == 'annotation':
-                    #print_debug('class %s, annotation skipped' %self.__class__, 5)
-                    pass
-                else:
-                    break
-                indx += 1
+                self.imports[import_ns] = tp
+            elif component == 'redefine':
+                # redefine not implemented yet
+                pass
+            elif component == 'annotation':
+                # annotation not implemented yet
+                pass
+            elif component == 'attribute':
+                tp = AttributeDeclaration(self)
+                tp.fromDom(childNode)
+                self.attr_decl[tp.getAttribute('name')] = tp
+            elif component == 'attributeGroup':
+                tp = AttributeGroupDefinition(self)
+                tp.fromDom(childNode)
+                self.attr_groups[tp.getAttribute('name')] = tp
+            elif component == 'element':
+                tp = ElementDeclaration(self)
+                tp.fromDom(childNode)
+                self.elements[tp.getAttribute('name')] = tp
+            elif component == 'group':
+                tp = ModelGroupDefinition(self)
+                tp.fromDom(childNode)
+                self.model_groups[tp.getAttribute('name')] = tp
+            elif component == 'notation':
+                tp = Notation(self)
+                tp.fromDom(childNode)
+                self.notations[tp.getAttribute('name')] = tp
+            elif component == 'complexType':
+                tp = ComplexType(self)
+                tp.fromDom(childNode)
+                self.types[tp.getAttribute('name')] = tp
+            elif component == 'simpleType':
+                tp = SimpleType(self)
+                tp.fromDom(childNode)
+                self.types[tp.getAttribute('name')] = tp
+            else:
+                break
 
-            # (attribute, attributeGroup, complexType, element, group, 
-            # notation, simpleType)*, annotation*)*
-            while indx < num:
-                node = contents[indx]
-                component = SplitQName(node.getTagName())[1]
-
-                if component == 'attribute':
-                    tp = AttributeDeclaration(self)
-                    tp.fromDom(node)
-                    self.attr_decl[tp.getAttribute('name')] = tp
-                elif component == 'attributeGroup':
-                    tp = AttributeGroupDefinition(self)
-                    tp.fromDom(node)
-                    self.attr_groups[tp.getAttribute('name')] = tp
-                elif component == 'complexType':
-                    tp = ComplexType(self)
-                    tp.fromDom(node)
-                    self.types[tp.getAttribute('name')] = tp
-                elif component == 'element':
-                    tp = ElementDeclaration(self)
-                    tp.fromDom(node)
-                    self.elements[tp.getAttribute('name')] = tp
-                elif component == 'group':
-                    tp = ModelGroupDefinition(self)
-                    tp.fromDom(node)
-                    self.model_groups[tp.getAttribute('name')] = tp
-                elif component == 'notation':
-                    tp = Notation(self)
-                    tp.fromDom(node)
-                    self.notations[tp.getAttribute('name')] = tp
-                elif component == 'simpleType':
-                    tp = SimpleType(self)
-                    tp.fromDom(node)
-                    self.types[tp.getAttribute('name')] = tp
-                else:
-                    break
-                indx += 1
-
-            while indx < num:
-                node = contents[indx]
-                component = SplitQName(node.getTagName())[1]
-
-                if component == 'annotation':
-                    #print_debug('class %s, annotation 2 skipped' %self.__class__, 5)
-                    pass
-                else:
-                    break
-                indx += 1
-
+#            indx += 1
 
     class Import(XMLSchemaComponent):
         """<import> 
@@ -1159,8 +1153,8 @@ class XMLSchema(XMLSchemaComponent):
                annotation?
         """
         attributes = {'id':None,
-            'namespace':None,
-            'schemaLocation':None}
+                      'namespace':None,
+                      'schemaLocation':None}
         contents = {'xsd':['annotation']}
         tag = 'import'
 
