@@ -16,7 +16,25 @@ ident = "$Id$"
 
 import types, weakref, urllib, sys
 from threading import RLock
-from xml.ns import SCHEMA, XMLNS, SOAP, WSDL
+try:
+    from xml.ns import XMLNS
+except ImportError:
+    # ref:
+    # http://cvs.sourceforge.net/viewcvs.py/pyxml/xml/xml/ns.py?view=markup
+    class XMLNS:
+        """XMLNS, Namespaces in XML
+
+        XMLNS (14-Jan-1999) is a W3C Recommendation.  It is specified in
+        http://www.w3.org/TR/REC-xml-names
+            BASE -- the basic namespace defined by the specification
+            XML -- the namespace for XML 1.0
+            HTML -- the namespace for HTML4.0
+        """
+
+        BASE        = "http://www.w3.org/2000/xmlns/"
+        XML         = "http://www.w3.org/XML/1998/namespace"
+        HTML        = "http://www.w3.org/TR/REC-html40"
+
 from Utility import DOM, Collection
 from StringIO import StringIO
 try:
