@@ -1014,9 +1014,12 @@ def GetWSAActionInput(operation):
     attr = operation.input.action
     if attr is not None:
         return attr
-    targetNamespace = operation.getPortType().getWSDL().targetNamespace
-    ptName = operation.getPortType().name
-    msgName = operation.getInputMessage().name
+    portType = operation.getPortType()
+    targetNamespace = portType.getWSDL().targetNamespace
+    ptName = portType.name
+    msgName = operation.input.name
+    if not msgName:
+        msgName = operation.name + 'Request'
     if targetNamespace.endswith('/'):
         return '%s%s/%s' %(targetNamespace, ptName, msgName)
     return '%s/%s/%s' %(targetNamespace, ptName, msgName)
@@ -1025,10 +1028,12 @@ def GetWSAActionOutput(operation):
     """Find wsa:Action attribute, and return value or the default."""
     attr = operation.output.action
     if attr is not None:
-        return attr.value
+        return attr
     targetNamespace = operation.getPortType().getWSDL().targetNamespace
     ptName = operation.getPortType().name
-    msgName = operation.getOutputMessage().name
+    msgName = operation.output.name
+    if not msgName:
+        msgName = operation.name + 'Response'
     if targetNamespace.endswith('/'):
         return '%s%s/%s' %(targetNamespace, ptName, msgName)
     return '%s/%s/%s' %(targetNamespace, ptName, msgName)
