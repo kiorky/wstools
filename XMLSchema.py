@@ -15,10 +15,19 @@
 ident = "$Id$"
 
 import types, weakref, sys
-from threading import RLock
 from Namespaces import XMLNS
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
+
+# If we have no threading, this should be a no-op
+try:
+    from threading import RLock
+except ImportError:
+    class RLock:
+        def acquire():
+            pass
+        def release():
+            pass
 
 # 
 # Collections in XMLSchema class
