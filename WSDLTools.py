@@ -70,7 +70,7 @@ class WSDL:
         self.messages = CollectionNS(self)
         self.portTypes = CollectionNS(self)
         self.bindings = CollectionNS(self)
-        #self.imports = Collection(self)
+        self.imports = Collection(self)
         self.types = Types(self)
         self.extensions = []
         self.strict = strict
@@ -125,10 +125,10 @@ class WSDL:
         self.bindings[name] = item
         return item
 
-    #def addImport(self, namespace, location):
-    #    item = ImportElement(namespace, location)
-    #    self.imports[namespace] = item
-    #    return item
+    def addImport(self, namespace, location):
+        item = ImportElement(namespace, location)
+        self.imports[namespace] = item
+        return item
 
     def load(self, document):
         # We save a reference to the DOM document to ensure that elements
@@ -273,9 +273,9 @@ class WSDL:
             location = urllib.basejoin(base_location, location)
             element.setAttributeNS(None, 'location', location)
 
-        #location = urllib.basejoin(self.location, location)
-        #obimport = self.addImport(namespace, location)
-        #obimport._loaded = 1
+        location = urllib.basejoin(self.location, location)
+        obimport = self.addImport(namespace, location)
+        obimport._loaded = 1
 
         importdoc = DOM.loadFromURL(location)
         try:
