@@ -75,7 +75,17 @@ def urlopen(url, timeout=20, redirects=None):
     if frag:   path = '%s#%s' % (path, frag)
 
     if scheme == 'https':
-        conn = TimeoutHTTPS(host, None, timeout)
+        # If ssl is not compiled into Python, you will not get an exception
+        # until a conn.endheaders() call.   We need to know sooner, so use
+        # getattr.
+        if hasattr(socket, 'ssl'):
+            conn = TimeoutHTTPS(host, None, timeout)
+        else:
+            import M2Crypto
+            ctx = M2Crypto.SSL.Context()
+            ctx.set_session_timeout(timeout)
+            conn = M2Crypto.httpslib.HTTPSConnection(host, ssl_context=ctx)
+            #conn.set_debuglevel(1)
     else:
         conn = TimeoutHTTP(host, None, timeout)
 
