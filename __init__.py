@@ -4,6 +4,5 @@
 ident = "$Id$"
 
 import WSDLTools
-import ieee754
 import XMLname
 
