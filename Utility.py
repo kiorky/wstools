@@ -9,8 +9,7 @@
 
 ident = "$Id$"
 
-import types
-import string, httplib, smtplib, urllib, socket, weakref
+import sys, types, httplib, smtplib, urllib, socket, weakref
 from os.path import isfile
 from string import join, strip, split
 from UserDict import UserDict
@@ -54,6 +53,18 @@ except:
             return
         return tuple(l)
 
+#
+# python2.3 urllib.basejoin does not remove current directory ./
+# from path and this causes problems on subsequent basejoins.
+#
+basejoin = urllib.basejoin
+if sys.version_info[0:2] < (2, 4, 0, 'final', 0)[0:2]:
+    #basejoin = lambda base,url: urllib.basejoin(base,url.lstrip('./'))
+    token = './'
+    def basejoin(base, url): 
+        if url.startswith(token) is True:
+            return urllib.basejoin(base,url[2:])
+        return urllib.basejoin(base,url)
 
 class NamespaceError(Exception):
     """Used to indicate a Namespace Error."""
@@ -115,6 +126,7 @@ class TimeoutHTTPS(HTTPSConnection):
         realsock = getattr(sock.sock, '_sock', sock.sock)
         ssl = socket.ssl(realsock, self.key_file, self.cert_file)
         self.sock = httplib.FakeSocket(sock, ssl)
+
 
 def urlopen(url, timeout=20, redirects=None):
     """A minimal urlopen replacement hack that supports timeouts for http.

@@ -9,10 +9,10 @@
 
 ident = "$Id$"
 
-import urllib, weakref
+import weakref
 from cStringIO import StringIO
 from Namespaces import OASIS, XMLNS, WSA200408, WSA200403, WSA200303
-from Utility import Collection, CollectionNS, DOM, ElementProxy
+from Utility import Collection, CollectionNS, DOM, ElementProxy, basejoin
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 
 
@@ -183,16 +183,36 @@ class WSDL:
         self.name = DOM.getAttr(definitions, 'name', None, None)
         self.documentation = GetDocumentation(definitions)
 
-        # Resolve (recursively) any import elements in the document.
-        imported = {}
+        # 
+        # Retrieve all <wsdl:import>'s, append all children of imported
+        # document to main document.  First iteration grab all original 
+        # <wsdl:import>'s from document, second iteration grab all 
+        # "imported" <wsdl:imports> from document, etc break out when 
+        # no more <wsdl:import>'s.
+        # 
+        imported = []
         base_location = self.location
-        while len(DOM.getElements(definitions, 'import', NS_WSDL)):
+        do_it = True
+        while do_it:
+            do_it = False
             for element in DOM.getElements(definitions, 'import', NS_WSDL):
                 location = DOM.getAttr(element, 'location')
-                location = urllib.basejoin(base_location, location)
-                self._import(self.document, element, base_location)
+                if base_location is not None:
+                    location = basejoin(base_location, location)
 
-        #reader = SchemaReader(base_url=self.location)
+                if location not in imported:
+                    do_it = True
+                    self._import(document, element, base_location)
+                    imported.append(location)
+                else:
+                    definitions.removeChild(element)
+
+            base_location = None
+
+        # 
+        # No more <wsdl:import>'s, now load up all other 
+        # WSDL information items.
+        # 
         for element in DOM.getElements(definitions, None, None):
             targetNamespace = DOM.getAttr(element, 'targetNamespace')
             localName = element.localName
@@ -289,7 +309,7 @@ class WSDL:
                 'Invalid import element (missing namespace or location).'
                 )
         if base_location:
-            location = urllib.basejoin(base_location, location)
+            location = basejoin(base_location, location)
             element.setAttributeNS(None, 'location', location)
 
         obimport = self.addImport(namespace, location)
@@ -334,7 +354,7 @@ class WSDL:
                 #XXX Quick Hack, should be in WSDL Namespace.
                 if child.localName == 'import':
                     rlocation = child.getAttributeNS(None, 'location')
-                    alocation = urllib.basejoin(location, rlocation)
+                    alocation = basejoin(location, rlocation)
                     child.setAttribute('location', alocation)
                 elif child.localName == 'types':
                     child.setAttribute('base-location', location)

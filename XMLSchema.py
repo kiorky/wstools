@@ -14,10 +14,10 @@
 
 ident = "$Id$"
 
-import types, weakref, urllib, sys
+import types, weakref, sys
 from threading import RLock
 from Namespaces import XMLNS
-from Utility import DOM, DOMException, Collection, SplitQName
+from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
 
 def GetSchema(component):
@@ -107,7 +107,7 @@ class SchemaReader:
         """
         reader = self.__readerClass()
         if self.__base_url:
-            url = urllib.basejoin(self.__base_url,url)
+            url = basejoin(self.__base_url,url)
         reader.loadFromURL(url)
         schema = XMLSchema()
         schema.setBaseUrl(url)
@@ -121,7 +121,7 @@ class SchemaReader:
            filename -- name of file to open
         """
         if self.__base_url:
-            filename = urllib.basejoin(self.__base_url,filename)
+            filename = basejoin(self.__base_url,filename)
         file = open(filename, 'rb')
         try:
             schema = self.loadFromStream(file, filename)
