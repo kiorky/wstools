@@ -167,7 +167,13 @@ class TestDiff:
                 for cexpr in self.expectedFailures:
                     origLine = cexpr.sub('', origLine)
                     testLine = cexpr.sub('', testLine)
-                self.testInst.failUnlessEqual(origLine, testLine)
+                if origLine != testLine:    # fails
+                    # advance test file to next test
+                    line = origLine
+                    while line and line != self.divider:
+                        line = self.origStrFile.readline() 
+                    self.testInst.failUnlessEqual(origLine, testLine)
+
         else:       # write new test file
             for line in testStrFile:
                 self.dataFile.write(line)
