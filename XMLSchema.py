@@ -2697,6 +2697,12 @@ class SimpleType(XMLSchemaComponent,\
             self.annotation = None
             self.content = None
 
+        def getAttributeBase(self):
+            return XMLSchemaComponent.getAttribute(self, 'base')
+
+        def getTypeDefinition(self, attribute='base'):
+            return XMLSchemaComponent.getTypeDefinition(self, attribute)
+
         def getSimpleTypeContent(self):
             for el in self.content:
                 if el.isSimple(): return el
@@ -2815,7 +2821,8 @@ class SimpleType(XMLSchemaComponent,\
 
                  
 class AnonymousSimpleType(SimpleType,\
-                          SimpleMarker):
+                          SimpleMarker,\
+                          LocalMarker):
     """<simpleType>
        parents:
            attribute, element, list, restriction, union
