@@ -172,7 +172,6 @@ class TestDiff:
             for line in testStrFile:
                 self.dataFile.write(line)
             self.dataFile.write(self.divider)
-        testStrFile.close()
 
 
     def close(self):
