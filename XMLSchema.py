@@ -1053,7 +1053,7 @@ class XMLSchema(XMLSchemaComponent):
                     reader = SchemaReader()
                     reader._imports = self._parent().getImportSchemas()
                     reader._includes = self._parent().getIncludeSchemas()
-                    self._schema = reader.readFromUrl(url)
+                    self._schema = reader.loadFromURL(url)
                     self._schema.setBaseUrl(url)
             return self._schema or schema
 
@@ -1105,7 +1105,7 @@ class XMLSchema(XMLSchemaComponent):
                     reader = SchemaReader()
                     reader._imports = schema.getImportSchemas()
                     reader._includes = schema.getIncludeSchemas()
-                    self._schema = reader.readFromUrl(url)
+                    self._schema = reader.loadFromURL(url)
                     self._schema.setBaseUrl(url)
             return self._schema
 
