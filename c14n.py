@@ -525,7 +525,7 @@ def Canonicalize(node, output=None, **kw):
         else:
             apply(_implementation2, (node, output.write), kw)
     else:
-        s = c14n.StringIO.StringIO()
+        s = StringIO.StringIO()
         if _implementation2 is None:
             _implementation(node, s.write, **kw)
         else:
