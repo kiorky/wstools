@@ -127,9 +127,10 @@ class SchemaError(Exception):
 # DOM Utility Adapters 
 ##########################
 class DOMAdapterInterface:
-    def hasattr(self, attr):
+    def hasattr(self, attr, ns=None):
         """return true if node has attribute 
-           attr - attribute to check for
+           attr -- attribute to check for
+           ns -- namespace of attribute, by default None
         """
         raise NotImplementedError, 'adapter method not implemented'
 
@@ -146,6 +147,11 @@ class DOMAdapterInterface:
 
     def getAttributeDictionary(self):
         """returns a dict of node's attributes
+        """
+        raise NotImplementedError, 'adapter method not implemented'
+
+    def getNamespace(self, prefix):
+        """returns namespace referenced by prefix.
         """
         raise NotImplementedError, 'adapter method not implemented'
 
@@ -180,14 +186,14 @@ class DOMAdapter(DOMAdapterInterface):
             self.__node = node
         self.__attributes = None
 
-    def hasattr(self, attr):
-        """XXX assuming all xsd attributes not prefixed,
-           all others are.  Should ask xmlInterface so
-           it can take care namespace mapping for
-           prefixed attributes
+    def hasattr(self, attr, ns=None):
+        """attr -- attribute 
+           ns -- optional namespace, None means unprefixed attribute.
         """
         if not self.__attributes:
             self.setAttributeDictionary()
+        if ns:
+            return self.__attributes.get(ns,{}).has_key(attr)
         return self.__attributes.has_key(attr)
 
     def getContentList(self, *contents):
@@ -212,6 +218,23 @@ class DOMAdapter(DOMAdapterInterface):
     def getTagName(self):
         return self.__node.tagName
 
+    def getNamespace(self, prefix):
+        """prefix -- deference namespace prefix in node's context.
+           Ascends parent nodes until found.
+        """
+        namespace = None
+        if prefix == 'xmlns':
+            namespace = DOM.findDefaultNS(prefix, self.__node)
+        else:
+            try:
+                namespace = DOM.findNamespaceURI(prefix, self.__node)
+            except DOMException, ex:
+                if prefix != 'xml':
+                    raise SchemaError, '%s namespace not declared for %s'\
+                        %(prefix, self.__node._get_tagName())
+                namespace = XMLNS
+        return namespace
+           
     def loadDocument(self, file):
         self.__node = DOM.loadDocument(file)
         if hasattr(self.__node, 'documentElement'):
@@ -250,6 +273,9 @@ class XMLSchemaComponent(XMLBase):
                Value can be a function for runtime dependencies.
            contents -- dict of namespace keyed content lists.
                'xsd' content of xsd namespace.
+           xmlns_key -- key for declared xmlns namespace.
+           xmlns -- xmlns is special prefix for namespace dictionary
+           xml -- special xml prefix for xml namespace.
     """
     required = []
     attributes = {}
@@ -257,12 +283,7 @@ class XMLSchemaComponent(XMLBase):
     xmlns_key = ''
     xmlns = 'xmlns'
     xml = 'xml'
-    xsd = 'xsd'
-    wsdl = 'wsdl'
-    soap = 'soap'
-    soapenc = 'soapenc'
-    mime = 'mime'
-    http = 'http'
+    #xsd = 'xsd'
 
     def __init__(self, parent=None):
         """parent -- parent instance
@@ -285,12 +306,10 @@ class XMLSchemaComponent(XMLBase):
         """
         parent = self
         targetNamespace = 'targetNamespace'
-        tns = self.attributes[XMLSchemaComponent.xsd].get(targetNamespace)
+        tns = self.attributes.get(targetNamespace)
         while not tns:
             parent = parent._parent()
-            print parent
-            print parent.attributes[XMLSchemaComponent.xsd]
-            tns = parent.attributes[XMLSchemaComponent.xsd].get(targetNamespace)
+            tns = parent.attributes.get(targetNamespace)
         return tns
 
     def getTypeDefinition(self, attribute):
@@ -312,7 +331,7 @@ class XMLSchemaComponent(XMLBase):
            collection -- collection in parent Schema instance to search.
         """
         obj = None
-        tdc = self.attributes[XMLSchemaComponent.xsd].get(attribute)
+        tdc = self.attributes.get(attribute)
         if tdc:
             parent = GetSchema(self)
             if parent.targetNamespace == tdc.getTargetNamespace():
@@ -323,90 +342,75 @@ class XMLSchemaComponent(XMLBase):
         return obj
 
     def getXMLNS(self, prefix=None):
-        """retrieve contents
-           empty string returns 'xmlns'
+        """deference prefix or by default xmlns, returns namespace. 
         """
         parent = self
-        ns = self.attributes[XMLSchemaComponent.xmlns].get(prefix)
+        ns = self.attributes[XMLSchemaComponent.xmlns].get(prefix or\
+                XMLSchemaComponent.xmlns_key)
         while not ns:
             parent = parent._parent()
-            ns = parent.attributes[XMLSchemaComponent.xmlns].get(prefix or XMLSchemaComponent.xmlns_key)
+            ns = parent.attributes[XMLSchemaComponent.xmlns].get(prefix or\
+                    XMLSchemaComponent.xmlns_key)
         return ns
 
     def getAttribute(self, attribute):
         """return requested attribute or None
         """
-        return self.attributes[XMLSchemaComponent.xsd].get(attribute)
+        return self.attributes.get(attribute)
  
     def setAttributes(self, node):
         """Sets up attribute dictionary, checks for required attributes and 
            sets default attribute values. attr is for default attribute values 
            determined at runtime.
-
-           attribute dictionary is prefix keyed by 
-             xml
-             xmlns
-             xsd
-             wsdl
-             soap
- 
-           all other keys are namespace values.
+           
+           structure of attributes dictionary
+               ['xmlns'][xmlns_key] --  xmlns namespace
+               ['xmlns'][prefix] --  declared namespace prefix 
+               [namespace][prefix] -- attributes declared in a namespace
+               [attribute] -- attributes w/o prefix, default namespaces do
+                   not directly apply to attributes, ie Name can't collide 
+                   with QName.
         """
-        self.attributes = {XMLSchemaComponent.xsd:{},\
-                           XMLSchemaComponent.xmlns:{}}
+        self.attributes = {XMLSchemaComponent.xmlns:{}}
         for k,v in node.getAttributeDictionary().items():
             prefix,value = SplitQName(k)
             if value == XMLSchemaComponent.xmlns:
                 self.attributes[value][prefix or XMLSchemaComponent.xmlns_key] = v
             elif prefix:
                 ns = node.getNamespace(prefix)
-                if ns == XMLNS or prefix == XMLSchemaComponent.xml:
-                    if not self.attributes.has_key(XMLSchemaComponent.xml):
-                        self.attributes[XMLSchemaComponent.xml] = {}
-                    self.attributes[XMLSchemaComponent.xml][k] = v
-                elif ns in SCHEMA.XSD_LIST:
-                    self.attributes[XMLSchemaComponent.xsd][value] = v
-                elif ns == WSDL.BASE:
-                    if not self.attributes.has_key(XMLSchemaComponent.wsdl):
-                        self.attributes[XMLSchemaComponent.wsdl] = {}
-                    self.attributes[XMLSchemaComponent.wsdl][value] = v
-                elif ns == WSDL.BIND_HTTP:
-                    if not self.attributes.has_key(XMLSchemaComponent.http):
-                        self.attributes[XMLSchemaComponent.http] = {}
-                    self.attributes[XMLSchemaComponent.http][value] = v
-                elif ns == WSDL.BIND_MIME:
-                    if not self.attributes.has_key(XMLSchemaComponent.mime):
-                        self.attributes[XMLSchemaComponent.mime] = {}
-                    self.attributes[XMLSchemaComponent.mime][value] = v
-                elif ns == WSDL.BIND_SOAP:
-                    if not self.attributes.has_key(XMLSchemaComponent.soap):
-                        self.attributes[XMLSchemaComponent.soap] = {}
-                    self.attributes[XMLSchemaComponent.soap][value] = v
-                else:
-                    self.attributes[ns][value] = v
+                if not ns: 
+                    raise 
+                if not ns or not self.attributes.has_key(ns):
+                    self.attributes[ns] = {}
             else:
-                #UNPREFIXED Attribute
-                self.attributes[XMLSchemaComponent.xsd][value] = v
+                self.attributes[value] = v
 
         self.__checkAttributes()
         self.__setAttributeDefaults()
 
         #set QNames
         for k in ['type', 'element', 'base', 'ref', 'substitutionGroup', 'itemType']:
-            if self.attributes[XMLSchemaComponent.xsd].has_key(k):
-                prefix, value = SplitQName(self.attributes[XMLSchemaComponent.xsd].get(k))
-                self.attributes[XMLSchemaComponent.xsd][k] = \
+            if self.attributes.has_key(k):
+                prefix, value = SplitQName(self.attributes.get(k))
+                self.attributes[k] = \
                     TypeDescriptionComponent((self.getXMLNS(prefix), value))
 
-        #Union, memberTypes is a whitespace separated list of QNames
-        if self.attributes[XMLSchemaComponent.xsd].has_key('memberTypes'):
-            qnames = self.attributes[XMLSchemaComponent.xsd]['memberTypes']
-            
+        #Union, memberTypes is a whitespace separated list of QNames 
+        for k in ['memberTypes']:
+            if self.attributes.has_key(k):
+                qnames = self.attributes[k]
+                self.attributes[k] = []
+                for qname in qnames.split():
+                    prefix, value = SplitQName(qname)
+                    self.attributes['memberTypes'].append(\
+                        TypeDescriptionComponent(\
+                            (self.getXMLNS(prefix), value)))
 
     def getContents(self, node):
         """retrieve xsd contents
         """
-        return node.getContentList(*self.__class__.contents[XMLSchemaComponent.xsd])
+        #return node.getContentList(*self.__class__.contents[XMLSchemaComponent.xsd])
+        return node.getContentList(*self.__class__.contents['xsd'])
 
     def __setAttributeDefaults(self):
         """Looks for default values for unset attributes.  If
@@ -414,11 +418,11 @@ class XMLSchemaComponent(XMLBase):
            it must be defined as an instance variable.
         """
         for k,v in self.__class__.attributes.items():
-            if v and not self.attributes[XMLSchemaComponent.xsd].has_key(k):
+            if v and not self.attributes.has_key(k):
                 if isinstance(v, types.FunctionType):
-                    self.attributes[XMLSchemaComponent.xsd][k] = v(self)
+                    self.attributes[k] = v(self)
                 else:
-                    self.attributes[XMLSchemaComponent.xsd][k] = v
+                    self.attributes[k] = v
 
     def __checkAttributes(self):
         """Checks that required attributes have been defined,
@@ -426,13 +430,14 @@ class XMLSchemaComponent(XMLBase):
            all defined attributes are legal.
         """
         for a in self.__class__.required:
-            if not self.attributes[XMLSchemaComponent.xsd].has_key(a):
+            if not self.attributes.has_key(a):
                 raise SchemaError,\
                     'class instance %s, missing required attribute %s'\
                     %(self.__class__, a)
 
-        for a in self.attributes[XMLSchemaComponent.xsd].keys():
-            if a not in self.__class__.attributes.keys():
+        for a in self.attributes.keys():
+            if (a != XMLSchemaComponent.xmlns) and\
+                 a not in self.__class__.attributes.keys():
                 raise SchemaError, '%s, unknown attribute' %a
 
 
@@ -772,8 +777,8 @@ class XMLSchema(XMLSchemaComponent):
         """
         self.targetNamespace = None
         XMLSchemaComponent.__init__(self, parent)
-        f = lambda k: k.attributes[XMLSchemaComponent.xsd]['name']
-        ns = lambda k: k.attributes[XMLSchemaComponent.xsd]['namespace']
+        f = lambda k: k.attributes['name']
+        ns = lambda k: k.attributes['namespace']
         self.includes = Collection(self, key=f)
         self.imports = Collection(self, key=ns)
         self.elements = Collection(self, key=f)
@@ -858,22 +863,22 @@ class XMLSchema(XMLSchemaComponent):
     def getElementFormDefault(self):
         """return elementFormDefault attribute
         """
-        return self.attributes[XMLSchemaComponent.xsd]['elementFormDefault']
+        return self.attributes.get('elementFormDefault')
 
     def getAttributeFormDefault(self):
         """return attributeFormDefault attribute
         """
-        return self.attributes[XMLSchemaComponent.xsd]['attributeFormDefault']
+        return self.attributes.get('attributeFormDefault')
 
     def getBlockDefault(self):
         """return blockDefault attribute
         """
-        return self.attributes[XMLSchemaComponent.xsd].get('blockDefault')
+        return self.attributes.get('blockDefault')
 
     def getFinalDefault(self):
         """return finalDefault attribute 
         """
-        return self.attributes[XMLSchemaComponent.xsd].get('finalDefault')
+        return self.attributes.get('finalDefault')
 
     def load(self, node):
         self.setAttributes(node)
@@ -998,7 +1003,7 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
             contents = self.getContents(node)
 
-            if self.attributes[XMLSchemaComponent.xsd]['namespace'] == self._parent().attributes[XMLSchemaComponent.xsd]['targetNamespace']:
+            if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
                 raise SchemaError, 'namespace of schema and import match'
 
             for i in contents:
@@ -1015,16 +1020,16 @@ class XMLSchema(XMLSchemaComponent):
                and create a new Schema class instance, and keep a hard reference. 
             """
             if not self._schema:
-                schema = self._parent().getImportSchemas().get(self.attributes[XMLSchemaComponent.xsd]['namespace'])
+                ns = self.attributes['namespace']
+                schema = self._parent().getImportSchemas().get(ns)
                 if not schema and self._parent()._parent:
-                    schema = self._parent()._parent().getImportSchemas().get(self.attributes[XMLSchemaComponent.xsd]['namespace'])
+                    schema = self._parent()._parent().getImportSchemas().get(ns)
                 if not schema:
-                    if not self.attributes[XMLSchemaComponent.xsd].has_key('schemaLocation'):
-                        raise SchemaError, 'namespace(%s) is unknown'\
-                            %self.attributes[XMLSchemaComponent.xsd]['namespace']
+                    if not self.attributes.has_key('schemaLocation'):
+                        raise SchemaError, 'namespace(%s) is unknown' %ns
 
                     url = urllib.basejoin(self._parent().getBaseUrl(),\
-                           self.attributes[XMLSchemaComponent.xsd]['schemaLocation'])
+                           self.attributes['schemaLocation'])
                     reader = SchemaReader()
                     reader._imports = self._parent().getImportSchemas()
                     reader._includes = self._parent().getIncludeSchemas()
