@@ -490,7 +490,7 @@ class XMLSchemaComponent(XMLBase):
                 raise SchemaError,\
                     'class instance %s, missing required attribute %s'\
                     %(self.__class__, a)
-
+       
         for a in self.attributes.keys():
             if (a != XMLSchemaComponent.xmlns) and\
                 (a not in self.__class__.attributes.keys()) and not\
@@ -1615,6 +1615,7 @@ class ElementDeclaration(XMLSchemaComponent,\
         'fixed':None,
         'nillable':0,
         'abstract':0,
+        'substitutionGroup':None,
         'block':lambda self: self._parent().getBlockDefault(),
         'final':lambda self: self._parent().getFinalDefault()}
     contents = {'xsd':['annotation', 'simpleType', 'complexType', 'key',\
