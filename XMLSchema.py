@@ -1006,6 +1006,9 @@ class XMLSchema(XMLSchemaComponent):
         """
         return self.attributes.get('elementFormDefault')
 
+    def isElementFormDefaultQualified(self):
+        return self.attributes.get('elementFormDefault') == 'qualified'
+
     def getAttributeFormDefault(self):
         """return attributeFormDefault attribute
         """
@@ -1727,6 +1730,11 @@ class ElementDeclaration(XMLSchemaComponent,\
         self.content = None
         self.constraints = ()
 
+    def isQualified(self):
+        '''Global elements are always qualified.
+        '''
+        return True
+
     def getElementDeclaration(self, attribute):
         raise Warning, 'invalid operation for <%s>' %self.tag
 
@@ -1816,6 +1824,18 @@ class LocalElementDeclaration(ElementDeclaration,\
     contents = {'xsd':['annotation', 'simpleType', 'complexType', 'key',\
         'keyref', 'unique']}
 
+    def isQualified(self):
+        '''Local elements can be qualified or unqualifed according
+        to the attribute form, or the elementFormDefault.  By default
+        local elements are unqualified.
+        '''
+        form = self.getAttribute('form')
+        if form == 'qualified':
+            return True
+        if form == 'unqualified':
+            return False
+	raise SchemaError, 'Bad form (%s) for element: %s' %(form, self.getItemTrace())
+
 
 class ElementReference(XMLSchemaComponent,\
                        ElementMarker,\
@@ -1892,6 +1912,12 @@ class ElementWildCard(LocalElementDeclaration,\
     def __init__(self, parent):
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
+
+    def isQualified(self):
+        '''Global elements are always qualified, but if processContents
+        are not strict could have dynamically generated local elements.
+        '''
+        return GetSchema(self).isElementFormDefaultQualified()
 
     def getTypeDefinition(self, attribute):
         raise Warning, 'invalid operation for <%s>' %self.tag
