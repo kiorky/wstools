@@ -1,25 +1,23 @@
-Two top level modules have been provided to run the tests. "test_wstools.py" is used
-to run all of the local tests. "test_wstools_net.py" is used to run all of the 
-tests that require network access.
+Two top level modules have been provided to run the tests. "test_wstools.py"
+is used to run all of the local tests. "test_wstools_net.py" is used to run
+all of the tests that require network access.
 
-TESTS:
-    test_t1 -- Basic test, just checks that wsdl and xsd objects are in the
-	right places.
+Add the -v option for more informative feedback.
 
 ADDING TESTS:
     1. For Stand-Alone tests add WSDL FILE to appropriate archive file
         Need to add a NEW Archive?:
-            config.py [files] "archive" -- tuple of all archive files, 
+            config.txt [files] "archive" -- tuple of all archive files, 
             if you need to create a new archive append the archive 
             name to the 'archive' tuple.
 
-    2. Edit config.py section(s):
+    2. Edit config.txt section(s):
         option -- name by which service will be referenced in test case.
             Need an entry under appropriate section(s), this name
             must be unique within each section it appears but it may 
             appear in multiple sections.
 
-        config.py "test" sections:
+        config.txt "test" sections:
           Stand-Alone --  add "option" under [services_by_file]
 		eg. amazon = exports/AmazonWebServices.wsdl
 
@@ -28,21 +26,7 @@ ADDING TESTS:
 
           Broken -- add "option" under [broken]
 
-    3. In test module(s)
-        a. Add test case:
-
-           #eg. test_t1.py 
-	   class AmazonTestCase(WSDLToolsTestCase):
-		def test(self):
-		    self.option = 'amazon'
-		    self.loadFromConfig(CONFIG)
-
-        b. Add class name of test case to CASES list.
-		CASES = [AirportTestCase,
-         		 AmazonTestCase, 
-                         .... etc
-
-    4. Done
+    3. Done
 
 
 CONTENTS OF SAMPLE WSDL/XSD:

@@ -6,8 +6,10 @@
 ###########################################################################
 
 import sys, unittest
+import ConfigParser
 from ZSI.wstools.Utility import DOM
-import utils
+from ZSI.wstools.WSDLTools import WSDLReader
+from ZSI.wstools.TimeoutSocket import TimeoutError
 
 class WSDLToolsTestCase(unittest.TestCase):
 
@@ -15,10 +17,7 @@ class WSDLToolsTestCase(unittest.TestCase):
         unittest.TestCase.__init__(self, methodName)
 
     def setUp(self):
-        global configLoader
-
-            # not thread safe
-        self.path = configLoader.nameGenerator.next()
+        self.path = nameGenerator.next()
         print self.path
         sys.stdout.flush()
 
@@ -45,9 +44,17 @@ class WSDLToolsTestCase(unittest.TestCase):
             name = DOM.getAttr(cnode, key)
             component[name] 
 
-    def wsdlTestAll(self):
+    def test_all(self):
         try:
-            self.wsdl = utils.setUpWsdl(self.path)
+            if self.path[:7] == 'http://':
+                self.wsdl = WSDLReader().loadFromURL(self.path)
+            else:
+                self.wsdl = WSDLReader().loadFromFile(self.path)
+
+        except TimeoutError:
+            print "connection timed out"
+            sys.stdout.flush()
+            return
         except:
             self.path = self.path + ": load failed, unable to start"
             raise
@@ -120,25 +127,34 @@ class WSDLToolsTestCase(unittest.TestCase):
         self.checkXSDCollection('simpleType', schema.types, node)
 
 
-def makeTestSuite(section=None):
-    global configLoader
+def setUpOptions(section):
+    cp = ConfigParser.ConfigParser()
+    cp.read('config.txt')
+    if not cp.sections():
+        print 'fatal error:  configuration file config.txt not present'
+        sys.exit(0)
+    if not cp.has_section(section):
+        print '%s section not present in configuration file, exiting' % section
+        sys.exit(0)
+    return cp, len(cp.options(section))
 
+def getOption(cp, section):
+    for name, value in cp.items(section):
+        yield value
+    
+def makeTestSuite(section='services_by_file'):
+    global nameGenerator
+
+    cp, numTests = setUpOptions(section)
+    nameGenerator = getOption(cp, section)
     suite = unittest.TestSuite()
-    configLoader = utils.MatchTestLoader(False, "config.py", "WSDLToolsTestCase")
-    if not section:
-        found = configLoader.setSection(sys.argv)
-        if not found:
-            configLoader.setSection("services_by_http")
-    else:
-        configLoader.setSection(section)
-    configLoader.testMethodPrefix = "wsdlTest"
-    suite.addTest(configLoader.loadTestsFromConfig(WSDLToolsTestCase))
+    for i in range(0, numTests):
+        suite.addTest(unittest.makeSuite(WSDLToolsTestCase, 'test_'))
     return suite
 
 
 def main():
-    loader = utils.MatchTestLoader(False, None, "makeTestSuite")
-    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
+    unittest.main(defaultTest="makeTestSuite")
                   
 
 if __name__ == "__main__" : main()

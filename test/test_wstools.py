@@ -7,11 +7,10 @@
 
 import unittest, tarfile, os, ConfigParser
 import test_wsdl
-import utils
 
 
 SECTION='files'
-CONFIG_FILE = 'config.py'
+CONFIG_FILE = 'config.txt'
 
 def extractFiles(section, option):
     config = ConfigParser.ConfigParser()
@@ -31,8 +30,7 @@ def makeTestSuite():
 
 def main():
     extractFiles(SECTION, 'archives')
-    loader = utils.MatchTestLoader(True, None, "makeTestSuite")
-    unittest.main(defaultTest="makeTestSuite", testLoader=loader)
+    unittest.main(defaultTest="makeTestSuite")
 
 if __name__ == "__main__" : main()
     
