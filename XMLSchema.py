@@ -17,7 +17,7 @@ ident = "$Id$"
 import types, weakref, urllib, sys
 from threading import RLock
 from xml.dom.ext import SplitQName
-from xml.ns import SCHEMA, XMLNS
+from xml.ns import SCHEMA, XMLNS, SOAP, WSDL
 from Utility import DOM, Collection
 from StringIO import StringIO
 
@@ -254,6 +254,15 @@ class XMLSchemaComponent(XMLBase):
     attributes = {}
     contents = {}
     xmlns_key = ''
+    xmlns = 'xmlns'
+    xml = 'xml'
+    xsd = 'xsd'
+    wsdl = 'wsdl'
+    soap = 'soap'
+    soapenc = 'soapenc'
+    mime = 'mime'
+    http = 'http'
+
     def __init__(self, parent=None):
         """parent -- parent instance
            instance variables:
@@ -274,10 +283,13 @@ class XMLSchemaComponent(XMLBase):
         """return targetNamespace
         """
         parent = self
-        tns = self.attributes.get('targetNamespace')
+        targetNamespace = 'targetNamespace'
+        tns = self.attributes[XMLSchemaComponent.xsd].get(targetNamespace)
         while not tns:
             parent = parent._parent()
-            tns = parent.attributes.get('targetNamespace')
+            print parent
+            print parent.attributes[XMLSchemaComponent.xsd]
+            tns = parent.attributes[XMLSchemaComponent.xsd].get(targetNamespace)
         return tns
 
     def getTypeDefinition(self, attribute):
@@ -299,7 +311,7 @@ class XMLSchemaComponent(XMLBase):
            collection -- collection in parent Schema instance to search.
         """
         obj = None
-        tdc = self.attributes.get(attribute)
+        tdc = self.attributes[XMLSchemaComponent.xsd].get(attribute)
         if tdc:
             parent = GetSchema(self)
             if parent.targetNamespace == tdc.getTargetNamespace():
@@ -314,69 +326,98 @@ class XMLSchemaComponent(XMLBase):
            empty string returns 'xmlns'
         """
         parent = self
-        ns = self.attributes['xmlns'].get(prefix)
+        ns = self.attributes[XMLSchemaComponent.xmlns].get(prefix)
         while not ns:
             parent = parent._parent()
-            ns = parent.attributes['xmlns'].get(prefix or self.__class__.xmlns_key)
+            ns = parent.attributes[XMLSchemaComponent.xmlns].get(prefix or XMLSchemaComponent.xmlns_key)
         return ns
 
     def getAttribute(self, attribute):
         """return requested attribute or None
         """
-        return self.attributes.get(attribute)
+        return self.attributes[XMLSchemaComponent.xsd].get(attribute)
  
     def setAttributes(self, node):
         """Sets up attribute dictionary, checks for required attributes and 
            sets default attribute values. attr is for default attribute values 
            determined at runtime.
+
+           attribute dictionary is prefix keyed by 
+             xml
+             xmlns
+             xsd
+             wsdl
+             soap
+ 
+           all other keys are namespace values.
         """
-        self.attributes = {'xmlns':{}}
+        self.attributes = {XMLSchemaComponent.xsd:{},\
+                           XMLSchemaComponent.xmlns:{}}
         for k,v in node.getAttributeDictionary().items():
             prefix,value = SplitQName(k)
-            if value == 'xmlns':
-                self.attributes[value][prefix or self.__class__.xmlns_key] = v
+            if value == XMLSchemaComponent.xmlns:
+                self.attributes[value][prefix or XMLSchemaComponent.xmlns_key] = v
             elif prefix:
                 ns = node.getNamespace(prefix)
-                if ns == XMLNS or prefix == 'xml':
-                    self.attributes['xml'][k] = v
+                if ns == XMLNS or prefix == XMLSchemaComponent.xml:
+                    if not self.attributes.has_key(XMLSchemaComponent.xml):
+                        self.attributes[XMLSchemaComponent.xml] = {}
+                    self.attributes[XMLSchemaComponent.xml][k] = v
                 elif ns in SCHEMA.XSD_LIST:
-                    self.attributes[value] = v
+                    self.attributes[XMLSchemaComponent.xsd][value] = v
+                elif ns == WSDL.BASE:
+                    if not self.attributes.has_key(XMLSchemaComponent.wsdl):
+                        self.attributes[XMLSchemaComponent.wsdl] = {}
+                    self.attributes[XMLSchemaComponent.wsdl][value] = v
+                elif ns == WSDL.BIND_HTTP:
+                    if not self.attributes.has_key(XMLSchemaComponent.http):
+                        self.attributes[XMLSchemaComponent.http] = {}
+                    self.attributes[XMLSchemaComponent.http][value] = v
+                elif ns == WSDL.BIND_MIME:
+                    if not self.attributes.has_key(XMLSchemaComponent.mime):
+                        self.attributes[XMLSchemaComponent.mime] = {}
+                    self.attributes[XMLSchemaComponent.mime][value] = v
+                elif ns == WSDL.BIND_SOAP:
+                    if not self.attributes.has_key(XMLSchemaComponent.soap):
+                        self.attributes[XMLSchemaComponent.soap] = {}
+                    self.attributes[XMLSchemaComponent.soap][value] = v
                 else:
-                    raise SchemaError, 'attribute %s, namespace unknown' %k
+                    self.attributes[ns][value] = v
             else:
-                self.attributes[k] = v
+                #UNPREFIXED Attribute
+                self.attributes[XMLSchemaComponent.xsd][value] = v
 
         self.__checkAttributes()
         self.__setAttributeDefaults()
 
         #set QNames
         for k in ['type', 'element', 'base', 'ref', 'substitutionGroup', 'itemType']:
-            if self.attributes.has_key(k):
-                prefix, value = SplitQName(self.attributes.get(k))
-                self.attributes[k] = \
+            if self.attributes[XMLSchemaComponent.xsd].has_key(k):
+                prefix, value = SplitQName(self.attributes[XMLSchemaComponent.xsd].get(k))
+                self.attributes[XMLSchemaComponent.xsd][k] = \
                     TypeDescriptionComponent((self.getXMLNS(prefix), value))
 
         #Union, memberTypes is a whitespace separated list of QNames
-        if self.attributes.has_key('memberTypes'):
-            qnames = self.attributes['memberTypes']
+        if self.attributes[XMLSchemaComponent.xsd].has_key('memberTypes'):
+            qnames = self.attributes[XMLSchemaComponent.xsd]['memberTypes']
             
 
     def getContents(self, node):
         """retrieve xsd contents
         """
-        return node.getContentList(*self.__class__.contents['xsd'])
+        return node.getContentList(*self.__class__.contents[XMLSchemaComponent.xsd])
 
     def __setAttributeDefaults(self):
         """Looks for default values for unset attributes.  If
            class variable representing attribute is None, then
-           it must be defined as a instance variable.
+           it must be defined as an instance variable.
         """
         for k,v in self.__class__.attributes.items():
-            if v and not self.attributes.has_key(k):
+            if v and not self.attributes[XMLSchemaComponent.xsd].has_key(k):
                 if isinstance(v, types.FunctionType):
-                    self.attributes[k] = v(self)
+                    self.attributes[XMLSchemaComponent.xsd][k] = v(self)
                 else:
-                    self.attributes[k] = v
+                    self.attributes[XMLSchemaComponent.xsd][k] = v
 
     def __checkAttributes(self):
         """Checks that required attributes have been defined,
@@ -384,13 +425,13 @@ class XMLSchemaComponent(XMLBase):
            all defined attributes are legal.
         """
         for a in self.__class__.required:
-            if not self.attributes.has_key(a):
+            if not self.attributes[XMLSchemaComponent.xsd].has_key(a):
                 raise SchemaError,\
                     'class instance %s, missing required attribute %s'\
                     %(self.__class__, a)
 
-        for a in self.attributes.keys():
-            if a not in self.__class__.attributes.keys() + ['xmlns']:
+        for a in self.attributes[XMLSchemaComponent.xsd].keys():
+            if a not in self.__class__.attributes.keys():
                 raise SchemaError, '%s, unknown attribute' %a
 
 
@@ -812,22 +853,22 @@ class XMLSchema(XMLSchemaComponent):
     def getElementFormDefault(self):
         """return elementFormDefault attribute
         """
-        return self.attributes['elementFormDefault']
+        return self.attributes[XMLSchemaComponent.xsd]['elementFormDefault']
 
     def getAttributeFormDefault(self):
         """return attributeFormDefault attribute
         """
-        return self.attributes['attributeFormDefault']
+        return self.attributes[XMLSchemaComponent.xsd]['attributeFormDefault']
 
     def getBlockDefault(self):
         """return blockDefault attribute
         """
-        return self.attributes.get('blockDefault')
+        return self.attributes[XMLSchemaComponent.xsd].get('blockDefault')
 
     def getFinalDefault(self):
         """return finalDefault attribute 
         """
-        return self.attributes.get('finalDefault')
+        return self.attributes[XMLSchemaComponent.xsd].get('finalDefault')
 
     def load(self, node):
         self.setAttributes(node)
@@ -941,7 +982,7 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
             contents = self.getContents(node)
 
-            if self.attributes['namespace'] == self._parent().attributes['targetNamespace']:
+            if self.attributes[XMLSchemaComponent.xsd]['namespace'] == self._parent().attributes[XMLSchemaComponent.xsd]['targetNamespace']:
                 raise SchemaError, 'namespace of schema and import match'
 
             for i in contents:
@@ -958,16 +999,16 @@ class XMLSchema(XMLSchemaComponent):
                and create a new Schema class instance, and keep a hard reference. 
             """
             if not self._schema:
-                schema = self._parent().getImportSchemas().get(self.attributes['namespace'])
+                schema = self._parent().getImportSchemas().get(self.attributes[XMLSchemaComponent.xsd]['namespace'])
                 if not schema and self._parent()._parent:
-                    schema = self._parent()._parent().getImportSchemas().get(self.attributes['namespace'])
+                    schema = self._parent()._parent().getImportSchemas().get(self.attributes[XMLSchemaComponent.xsd]['namespace'])
                 if not schema:
-                    if not self.attributes.has_key('schemaLocation'):
+                    if not self.attributes[XMLSchemaComponent.xsd].has_key('schemaLocation'):
                         raise SchemaError, 'namespace(%s) is unknown'\
-                            %self.attributes['namespace']
+                            %self.attributes[XMLSchemaComponent.xsd]['namespace']
 
                     url = urllib.basejoin(self._parent().getBaseUrl(),\
-                           self.attributes['schemaLocation'])
+                           self.attributes[XMLSchemaComponent.xsd]['schemaLocation'])
                     reader = SchemaReader()
                     reader._imports = self._parent().getImportSchemas()
                     reader._includes = self._parent().getIncludeSchemas()
@@ -1016,10 +1057,10 @@ class XMLSchema(XMLSchemaComponent):
             if not self._schema:
                 schema = self._parent()._parent()
                 self._schema = schema.getIncludeSchemas(\
-                    self.attributes['schemaLocation'])
+                    self.attributes[XMLSchemaComponent.xsd]['schemaLocation'])
                 if not self._schema:
                     url = BaseUriResolver().normalize(\
-                       self.attributes['schemaLocation'], schema.getBaseUrl())
+                       self.attributes[XMLSchemaComponent.xsd]['schemaLocation'], schema.getBaseUrl())
                     reader = SchemaReader()
                     reader._imports = schema.getImportSchemas()
                     reader._includes = schema.getIncludeSchemas()
@@ -2013,19 +2054,22 @@ class ComplexType(XMLSchemaComponent,\
                 if component == 'all':
                     self.content = All(self)
                     self.content.fromDom(contents[indx])
+                    indx += 1
                 elif component == 'choice':
                     self.content = Choice(self)
                     self.content.fromDom(contents[indx])
+                    indx += 1
                 elif component == 'sequence':
                     self.content = Sequence(self)
                     self.content.fromDom(contents[indx])
+                    indx += 1
                 elif component == 'group':
                     self.content = ModelGroupReference(self)
                     self.content.fromDom(contents[indx])
+                    indx += 1
                 else:
 	            self.content = None
 
-                indx += 1
                 self.attr_content = []
                 while indx < num:
                     component = SplitQName(contents[indx].getTagName())[1]
