@@ -2187,9 +2187,6 @@ class SimpleType(XMLSchemaComponent,\
         self.content = None
         self.attr_content = None
 
-    def setType(self, qname, namespace):
-        self.type = TypeDescriptionComponent(namespace, qname)
-            
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
