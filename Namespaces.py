@@ -95,8 +95,10 @@ class WSRF_V1_2:
 
     class BASENOTIFICATION:
         XSD_DRAFT1 = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.xsd"
+
+        WSDL_DRAFT1 = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.wsdl"
         #LATEST = DRAFT1
-        #WSDL_LIST = (WSDL_DRAFT1,)
+        WSDL_LIST = (WSDL_DRAFT1,)
         XSD_LIST = (XSD_DRAFT1,)
 
     class BASEFAULTS:
