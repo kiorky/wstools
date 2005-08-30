@@ -1270,91 +1270,91 @@ if 1:
 
 if 1:
     def _clone_node(node, deep, newOwnerDocument):
-	"""
-	Clone a node and give it the new owner document.
-	Called by Node.cloneNode and Document.importNode
-	"""
-	if node.ownerDocument.isSameNode(newOwnerDocument):
-	    operation = xml.dom.UserDataHandler.NODE_CLONED
-	else:
-	    operation = xml.dom.UserDataHandler.NODE_IMPORTED
-	if node.nodeType == xml.dom.minidom.Node.ELEMENT_NODE:
-	    clone = newOwnerDocument.createElementNS(node.namespaceURI,
-						     node.nodeName)
-	    for attr in node.attributes.values():
-		clone.setAttributeNS(attr.namespaceURI, attr.nodeName, attr.value)
+        """
+        Clone a node and give it the new owner document.
+        Called by Node.cloneNode and Document.importNode
+        """
+        if node.ownerDocument.isSameNode(newOwnerDocument):
+            operation = xml.dom.UserDataHandler.NODE_CLONED
+        else:
+            operation = xml.dom.UserDataHandler.NODE_IMPORTED
+        if node.nodeType == xml.dom.minidom.Node.ELEMENT_NODE:
+            clone = newOwnerDocument.createElementNS(node.namespaceURI,
+                                                     node.nodeName)
+            for attr in node.attributes.values():
+                clone.setAttributeNS(attr.namespaceURI, attr.nodeName, attr.value)
 
-		prefix, tag = xml.dom.minidom._nssplit(attr.nodeName)
-		if prefix == 'xmlns':
-		    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
-		elif prefix:
-		    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
-		else:
-		    a = clone.getAttributeNodeNS(attr.namespaceURI, attr.nodeName)
-		a.specified = attr.specified
+                prefix, tag = xml.dom.minidom._nssplit(attr.nodeName)
+                if prefix == 'xmlns':
+                    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
+                elif prefix:
+                    a = clone.getAttributeNodeNS(attr.namespaceURI, tag)
+                else:
+                    a = clone.getAttributeNodeNS(attr.namespaceURI, attr.nodeName)
+                a.specified = attr.specified
 
-	    if deep:
-		for child in node.childNodes:
-		    c = xml.dom.minidom._clone_node(child, deep, newOwnerDocument)
-		    clone.appendChild(c)
-	elif node.nodeType == xml.dom.minidom.Node.DOCUMENT_FRAGMENT_NODE:
-	    clone = newOwnerDocument.createDocumentFragment()
-	    if deep:
-		for child in node.childNodes:
-		    c = xml.dom.minidom._clone_node(child, deep, newOwnerDocument)
-		    clone.appendChild(c)
+            if deep:
+                for child in node.childNodes:
+                    c = xml.dom.minidom._clone_node(child, deep, newOwnerDocument)
+                    clone.appendChild(c)
+        elif node.nodeType == xml.dom.minidom.Node.DOCUMENT_FRAGMENT_NODE:
+            clone = newOwnerDocument.createDocumentFragment()
+            if deep:
+                for child in node.childNodes:
+                    c = xml.dom.minidom._clone_node(child, deep, newOwnerDocument)
+                    clone.appendChild(c)
 
-	elif node.nodeType == xml.dom.minidom.Node.TEXT_NODE:
-	    clone = newOwnerDocument.createTextNode(node.data)
-	elif node.nodeType == xml.dom.minidom.Node.CDATA_SECTION_NODE:
-	    clone = newOwnerDocument.createCDATASection(node.data)
-	elif node.nodeType == xml.dom.minidom.Node.PROCESSING_INSTRUCTION_NODE:
-	    clone = newOwnerDocument.createProcessingInstruction(node.target,
-								 node.data)
-	elif node.nodeType == xml.dom.minidom.Node.COMMENT_NODE:
-	    clone = newOwnerDocument.createComment(node.data)
-	elif node.nodeType == xml.dom.minidom.Node.ATTRIBUTE_NODE:
-	    clone = newOwnerDocument.createAttributeNS(node.namespaceURI,
-						       node.nodeName)
-	    clone.specified = True
-	    clone.value = node.value
-	elif node.nodeType == xml.dom.minidom.Node.DOCUMENT_TYPE_NODE:
-	    assert node.ownerDocument is not newOwnerDocument
-	    operation = xml.dom.UserDataHandler.NODE_IMPORTED
-	    clone = newOwnerDocument.implementation.createDocumentType(
-		node.name, node.publicId, node.systemId)
-	    clone.ownerDocument = newOwnerDocument
-	    if deep:
-		clone.entities._seq = []
-		clone.notations._seq = []
-		for n in node.notations._seq:
-		    notation = xml.dom.minidom.Notation(n.nodeName, n.publicId, n.systemId)
-		    notation.ownerDocument = newOwnerDocument
-		    clone.notations._seq.append(notation)
-		    if hasattr(n, '_call_user_data_handler'):
-			n._call_user_data_handler(operation, n, notation)
-		for e in node.entities._seq:
-		    entity = xml.dom.minidom.Entity(e.nodeName, e.publicId, e.systemId,
-				    e.notationName)
-		    entity.actualEncoding = e.actualEncoding
-		    entity.encoding = e.encoding
-		    entity.version = e.version
-		    entity.ownerDocument = newOwnerDocument
-		    clone.entities._seq.append(entity)
-		    if hasattr(e, '_call_user_data_handler'):
-			e._call_user_data_handler(operation, n, entity)
-	else:
-	    # Note the cloning of Document and DocumentType nodes is
-	    # implemenetation specific.  minidom handles those cases
-	    # directly in the cloneNode() methods.
-	    raise xml.dom.NotSupportedErr("Cannot clone node %s" % repr(node))
+        elif node.nodeType == xml.dom.minidom.Node.TEXT_NODE:
+            clone = newOwnerDocument.createTextNode(node.data)
+        elif node.nodeType == xml.dom.minidom.Node.CDATA_SECTION_NODE:
+            clone = newOwnerDocument.createCDATASection(node.data)
+        elif node.nodeType == xml.dom.minidom.Node.PROCESSING_INSTRUCTION_NODE:
+            clone = newOwnerDocument.createProcessingInstruction(node.target,
+                                                                 node.data)
+        elif node.nodeType == xml.dom.minidom.Node.COMMENT_NODE:
+            clone = newOwnerDocument.createComment(node.data)
+        elif node.nodeType == xml.dom.minidom.Node.ATTRIBUTE_NODE:
+            clone = newOwnerDocument.createAttributeNS(node.namespaceURI,
+                                                       node.nodeName)
+            clone.specified = True
+            clone.value = node.value
+        elif node.nodeType == xml.dom.minidom.Node.DOCUMENT_TYPE_NODE:
+            assert node.ownerDocument is not newOwnerDocument
+            operation = xml.dom.UserDataHandler.NODE_IMPORTED
+            clone = newOwnerDocument.implementation.createDocumentType(
+                node.name, node.publicId, node.systemId)
+            clone.ownerDocument = newOwnerDocument
+            if deep:
+                clone.entities._seq = []
+                clone.notations._seq = []
+                for n in node.notations._seq:
+                    notation = xml.dom.minidom.Notation(n.nodeName, n.publicId, n.systemId)
+                    notation.ownerDocument = newOwnerDocument
+                    clone.notations._seq.append(notation)
+                    if hasattr(n, '_call_user_data_handler'):
+                        n._call_user_data_handler(operation, n, notation)
+                for e in node.entities._seq:
+                    entity = xml.dom.minidom.Entity(e.nodeName, e.publicId, e.systemId,
+                                    e.notationName)
+                    entity.actualEncoding = e.actualEncoding
+                    entity.encoding = e.encoding
+                    entity.version = e.version
+                    entity.ownerDocument = newOwnerDocument
+                    clone.entities._seq.append(entity)
+                    if hasattr(e, '_call_user_data_handler'):
+                        e._call_user_data_handler(operation, n, entity)
+        else:
+            # Note the cloning of Document and DocumentType nodes is
+            # implemenetation specific.  minidom handles those cases
+            # directly in the cloneNode() methods.
+            raise xml.dom.NotSupportedErr("Cannot clone node %s" % repr(node))
 
-	# Check for _call_user_data_handler() since this could conceivably
-	# used with other DOM implementations (one of the FourThought
-	# DOMs, perhaps?).
-	if hasattr(node, '_call_user_data_handler'):
-	    node._call_user_data_handler(operation, node, clone)
-	return clone
+        # Check for _call_user_data_handler() since this could conceivably
+        # used with other DOM implementations (one of the FourThought
+        # DOMs, perhaps?).
+        if hasattr(node, '_call_user_data_handler'):
+            node._call_user_data_handler(operation, node, clone)
+        return clone
 
     xml.dom.minidom._clone_node = _clone_node
 

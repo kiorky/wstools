@@ -80,7 +80,7 @@ else:
             #   xml_attrs -- Attributes in XML namespace from parent
             #       xml_attrs_local -- Local attributes in XML namespace.
             ns_parent, ns_rendered, xml_attrs = \
-        	    self.state[0], self.state[1].copy(), self.state[2].copy() #0422
+                    self.state[0], self.state[1].copy(), self.state[2].copy() #0422
             ns_local = ns_parent.copy()
             xml_attrs_local = {}
 
@@ -94,50 +94,50 @@ else:
             sort_these_attrs +=c14n._attrs(node)
             
             for a in sort_these_attrs:
-        	if a.namespaceURI == c14n.XMLNS.BASE:
-        	    n = a.nodeName
-        	    if n == "xmlns:": n = "xmlns"        # DOM bug workaround
-        	    ns_local[n] = a.nodeValue
-        	elif a.namespaceURI == c14n.XMLNS.XML:
-        	    if c14n._inclusive(self) or (in_subset and  c14n._in_subset(self.subset, a)): #020925 Test to see if attribute node in subset
-        		xml_attrs_local[a.nodeName] = a #0426
-        	else:
-        	    if  c14n._in_subset(self.subset, a):     #020925 Test to see if attribute node in subset
-        		other_attrs.append(a)
-        	#add local xml:foo attributes to ancestor's xml:foo attributes
-        	xml_attrs.update(xml_attrs_local)
+                if a.namespaceURI == c14n.XMLNS.BASE:
+                    n = a.nodeName
+                    if n == "xmlns:": n = "xmlns"        # DOM bug workaround
+                    ns_local[n] = a.nodeValue
+                elif a.namespaceURI == c14n.XMLNS.XML:
+                    if c14n._inclusive(self) or (in_subset and  c14n._in_subset(self.subset, a)): #020925 Test to see if attribute node in subset
+                        xml_attrs_local[a.nodeName] = a #0426
+                else:
+                    if  c14n._in_subset(self.subset, a):     #020925 Test to see if attribute node in subset
+                        other_attrs.append(a)
+                #add local xml:foo attributes to ancestor's xml:foo attributes
+                xml_attrs.update(xml_attrs_local)
 
             # Render the node
             W, name = self.write, None
             if in_subset: 
-        	name = node.nodeName
-        	W('<')
-        	W(name)
+                name = node.nodeName
+                W('<')
+                W(name)
 
-        	# Create list of NS attributes to render.
-        	ns_to_render = []
-        	for n,v in ns_local.items():
+                # Create list of NS attributes to render.
+                ns_to_render = []
+                for n,v in ns_local.items():
 
-        	    # If default namespace is XMLNS.BASE or empty,
-        	    # and if an ancestor was the same
-        	    if n == "xmlns" and v in [ c14n.XMLNS.BASE, '' ] \
-        	    and ns_rendered.get('xmlns') in [ c14n.XMLNS.BASE, '', None ]:
-        		continue
+                    # If default namespace is XMLNS.BASE or empty,
+                    # and if an ancestor was the same
+                    if n == "xmlns" and v in [ c14n.XMLNS.BASE, '' ] \
+                    and ns_rendered.get('xmlns') in [ c14n.XMLNS.BASE, '', None ]:
+                        continue
 
-        	    # "omit namespace node with local name xml, which defines
-        	    # the xml prefix, if its string value is
-        	    # http://www.w3.org/XML/1998/namespace."
-        	    if n in ["xmlns:xml", "xml"] \
-        	    and v in [ 'http://www.w3.org/XML/1998/namespace' ]:
-        		continue
+                    # "omit namespace node with local name xml, which defines
+                    # the xml prefix, if its string value is
+                    # http://www.w3.org/XML/1998/namespace."
+                    if n in ["xmlns:xml", "xml"] \
+                    and v in [ 'http://www.w3.org/XML/1998/namespace' ]:
+                        continue
 
 
-        	    # If not previously rendered
-        	    # and it's inclusive  or utilized
-        	    if (n,v) not in ns_rendered.items() \
-        	      and (c14n._inclusive(self) or \
-        	      c14n._utilized(n, node, other_attrs, self.unsuppressedPrefixes)):
-        		ns_to_render.append((n, v))
+                    # If not previously rendered
+                    # and it's inclusive  or utilized
+                    if (n,v) not in ns_rendered.items() \
+                      and (c14n._inclusive(self) or \
+                      c14n._utilized(n, node, other_attrs, self.unsuppressedPrefixes)):
+                        ns_to_render.append((n, v))
 
                 #####################################
                 # JRB
@@ -191,34 +191,34 @@ else:
 
 
 
-        	# Sort and render the ns, marking what was rendered.
-        	ns_to_render.sort(c14n._sorter_ns)
-        	for n,v in ns_to_render:
-        	    #XXX JRB, getting 'xmlns,None' here when xmlns=''
-        	    if v: self._do_attr(n, v)
-        	    else:
-        		v = ''
-        		self._do_attr(n, v)
-        	    ns_rendered[n]=v    #0417
+                # Sort and render the ns, marking what was rendered.
+                ns_to_render.sort(c14n._sorter_ns)
+                for n,v in ns_to_render:
+                    #XXX JRB, getting 'xmlns,None' here when xmlns=''
+                    if v: self._do_attr(n, v)
+                    else:
+                        v = ''
+                        self._do_attr(n, v)
+                    ns_rendered[n]=v    #0417
 
-        	# If exclusive or the parent is in the subset, add the local xml attributes
-        	# Else, add all local and ancestor xml attributes
-        	# Sort and render the attributes.
-        	if not c14n._inclusive(self) or c14n._in_subset(self.subset,node.parentNode):  #0426
-        	    other_attrs.extend(xml_attrs_local.values())
-        	else:
-        	    other_attrs.extend(xml_attrs.values())
+                # If exclusive or the parent is in the subset, add the local xml attributes
+                # Else, add all local and ancestor xml attributes
+                # Sort and render the attributes.
+                if not c14n._inclusive(self) or c14n._in_subset(self.subset,node.parentNode):  #0426
+                    other_attrs.extend(xml_attrs_local.values())
+                else:
+                    other_attrs.extend(xml_attrs.values())
                 #print "OTHER: ", other_attrs
-        	other_attrs.sort(c14n._sorter)
-        	for a in other_attrs:
-        	    self._do_attr(a.nodeName, a.value)
+                other_attrs.sort(c14n._sorter)
+                for a in other_attrs:
+                    self._do_attr(a.nodeName, a.value)
                 W('>')
 
 
             # Push state, recurse, pop state.
             state, self.state = self.state, (ns_local, ns_rendered, xml_attrs)
             for c in c14n._children(node):
-        	c14n._implementation.handlers[c.nodeType](self, c)
+                c14n._implementation.handlers[c.nodeType](self, c)
             self.state = state
 
             if name: W('</%s>' % name)
