@@ -2288,7 +2288,6 @@ class ComplexType(XMLSchemaComponent,\
         XMLSchemaComponent.__init__(self, parent)
         self.annotation = None
         self.content = None
-        self.facets = []
         self.attr_content = None
 
     def isMixed(self):
@@ -2316,7 +2315,6 @@ class ComplexType(XMLSchemaComponent,\
     def fromDom(self, node):
         self.setAttributes(node)
         contents = self.getContents(node)
-        facets = {}
       
         indx = 0
         num = len(contents)
@@ -2785,6 +2783,7 @@ class SimpleType(XMLSchemaComponent,\
             XMLSchemaComponent.__init__(self, parent)
             self.annotation = None
             self.content = None
+            self.facets = None
 
         def getAttributeBase(self):
             return XMLSchemaComponent.getAttribute(self, 'base')
@@ -2798,6 +2797,7 @@ class SimpleType(XMLSchemaComponent,\
             return None
 
         def fromDom(self, node):
+            self.facets = []
             self.setAttributes(node)
             contents = self.getContents(node)
             content = []
@@ -2812,8 +2812,7 @@ class SimpleType(XMLSchemaComponent,\
                     content.append(AnonymousSimpleType(self))
                     content[-1].fromDom(contents[indx])
                 elif component in RestrictionMarker.facets:
-                    facets[component] = contents[indx]
-                    self.facets.append(facets)
+                    self.facets.append(contents[indx])
                 else:
                     raise SchemaError, 'Unknown component (%s)' %(i.getTagName())
             self.content = tuple(content)
