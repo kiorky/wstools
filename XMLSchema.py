@@ -14,7 +14,7 @@
 
 ident = "$Id$"
 
-import types, weakref, sys
+import types, weakref, sys, warnings
 from Namespaces import XMLNS
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
@@ -50,6 +50,9 @@ def GetSchema(component):
 class SchemaReader:
     """A SchemaReader creates XMLSchema objects from urls and xml data.
     """
+    
+    namespaceToSchema = {}
+    
     def __init__(self, domReader=None, base_url=None):
         """domReader -- class must implement DOMAdapterInterface
            base_url -- base url string
@@ -120,16 +123,17 @@ class SchemaReader:
         """
         return self.loadFromStream(StringIO(data))
 
-    def loadFromURL(self, url):
+    def loadFromURL(self, url, schema=None):
         """Return an XMLSchema instance loaded from the given url.
            url -- URL to dereference
+           schema -- Optional XMLSchema instance.
         """
         reader = self.__readerClass()
         if self.__base_url:
             url = basejoin(self.__base_url,url)
 
         reader.loadFromURL(url)
-        schema = XMLSchema()
+        schema = schema or XMLSchema()
         schema.setBaseUrl(url)
         schema.load(reader)
         self.__setIncludes(schema)
@@ -1009,6 +1013,9 @@ class XMLSchema(XMLSchemaComponent):
            schema -- schema instance
            _imported_schemas 
         """
+        print "XMLSchema(%s) ADD IMPORT SCHEMA: %s" \
+            %(self.targetNamespace, schema.targetNamespace)
+            
         if not isinstance(schema, XMLSchema):
             raise TypeError, 'expecting a Schema instance'
         if schema.targetNamespace != self.targetNamespace:
@@ -1115,7 +1122,6 @@ class XMLSchema(XMLSchemaComponent):
             self.setAttributes(node)
 
         self.targetNamespace = self.getTargetNamespace()
-
         for childNode in self.getContents(node):
             component = SplitQName(childNode.getTagName())[1]
                 
@@ -1144,26 +1150,36 @@ class XMLSchema(XMLSchemaComponent):
                             v._parent = weakref.ref(self)
                             getattr(self,collection)[k] = v
                         else:
-                            print "Warning: Not keeping schema component."
-
+                            warnings.warn("Not keeping schema component.")
+      
             elif component == 'import':
+                slocd = SchemaReader.namespaceToSchema
                 tp = self.__class__.Import(self)
                 tp.fromDom(childNode)
-
-                import_ns = tp.getAttribute('namespace') or \
-                            self.__class__.empty_namespace
-
-                if not self.getImportSchemas().has_key(import_ns) and \
-                       tp.getAttribute('schemaLocation'):
-                    self.addImportSchema(tp.getSchema())
-
+                import_ns = tp.getAttribute('namespace') or\
+                    self.__class__.empty_namespace
+                schema = slocd.get(import_ns)
+                if schema is None:
+                    schema = XMLSchema()
+                    slocd[import_ns] = schema
+                    tp.loadSchema(schema)
+                else:           
+                    tp._schema = schema
+            
+                if self.getImportSchemas().has_key(import_ns):
+                    warnings.warn(\
+                        'Detected multiple imports of the namespace "%s" '\
+                        %import_ns)
+            
+                self.addImportSchema(schema)
+                # spec says can have multiple imports of same namespace
+                # but purpose of import is just dependency declaration.
                 self.imports[import_ns] = tp
+                
             elif component == 'redefine':
-                # redefine not implemented yet
-                pass
+                warnings.warn('redefine is ignored')
             elif component == 'annotation':
-                # annotation not implemented yet
-                pass
+                warnings.warn('annotation is ignored')
             elif component == 'attribute':
                 tp = AttributeDeclaration(self)
                 tp.fromDom(childNode)
@@ -1195,7 +1211,37 @@ class XMLSchema(XMLSchemaComponent):
             else:
                 break
 
-#            indx += 1
+#        slocd = SchemaReader.namespaceToSchema
+#        
+#        print "XMLSchema(%d): %s" %(id(self), self.targetNamespace)
+#        
+#        for node in imports:
+#            tp = self.__class__.Import(self)
+#            tp.fromDom(node)
+#
+#            import_ns = tp.getAttribute('namespace') or \
+#                        self.__class__.empty_namespace
+#                        
+#            print "<import namespace=%s>" %import_ns
+#            
+#            schema = slocd.get(import_ns)
+#            if schema is None:
+#                schema = XMLSchema()
+#                slocd[import_ns] = schema
+#                tp.loadSchema(schema)
+#            else:           
+#                tp._schema = schema
+#            
+#            if self.getImportSchemas().has_key(import_ns):
+#                warnings.warn(\
+#                    'Detected multiple imports of the namespace "%s",'+
+#                    'may cause problems if they have different schemaLocations.' %import_ns
+#                    )
+#                raise RuntimeError, 'hi'
+#            
+#            self.addImportSchema(schema)
+#            self.imports[import_ns] = tp
+
 
     class Import(XMLSchemaComponent):
         """<import> 
@@ -1244,6 +1290,7 @@ class XMLSchema(XMLSchemaComponent):
                 schema = self._parent().getImportSchemas().get(ns)
                 if not schema and self._parent()._parent:
                     schema = self._parent()._parent().getImportSchemas().get(ns)
+
                 if not schema:
                     url = self.attributes.get('schemaLocation')
                     if not url:
@@ -1254,6 +1301,16 @@ class XMLSchema(XMLSchemaComponent):
                     reader._includes = self._parent().getIncludeSchemas()
                     self._schema = reader.loadFromURL(url)
             return self._schema or schema
+            
+        def loadSchema(self, schema):
+            """
+            """
+            base_url = self._parent().getBaseUrl()
+            reader = SchemaReader(base_url=base_url)
+            reader._imports = self._parent().getImportSchemas()
+            reader._includes = self._parent().getIncludeSchemas()
+            self._schema = schema
+            reader.loadFromURL(self.attributes.get('schemaLocation'), schema)
 
 
     class Include(XMLSchemaComponent):
