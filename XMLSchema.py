@@ -1162,7 +1162,17 @@ class XMLSchema(XMLSchemaComponent):
                 if schema is None:
                     schema = XMLSchema()
                     slocd[import_ns] = schema
-                    tp.loadSchema(schema)
+                    try:
+                        tp.loadSchema(schema)
+                    except SchemaError:
+                        # Dependency declaration, hopefully implementation
+                        # is aware of this namespace (eg. SOAP,WSDL,?)
+                        warnings.warn(\
+                            '<import namespace="%s" schemaLocation=?>, %s'\
+                            %(import_ns, 'failed to load schema instance')
+                        )
+                        del slocd[import_ns]
+                        continue
                 else:           
                     tp._schema = schema
             
@@ -1210,38 +1220,6 @@ class XMLSchema(XMLSchemaComponent):
                 self.types[tp.getAttribute('name')] = tp
             else:
                 break
-
-#        slocd = SchemaReader.namespaceToSchema
-#        
-#        print "XMLSchema(%d): %s" %(id(self), self.targetNamespace)
-#        
-#        for node in imports:
-#            tp = self.__class__.Import(self)
-#            tp.fromDom(node)
-#
-#            import_ns = tp.getAttribute('namespace') or \
-#                        self.__class__.empty_namespace
-#                        
-#            print "<import namespace=%s>" %import_ns
-#            
-#            schema = slocd.get(import_ns)
-#            if schema is None:
-#                schema = XMLSchema()
-#                slocd[import_ns] = schema
-#                tp.loadSchema(schema)
-#            else:           
-#                tp._schema = schema
-#            
-#            if self.getImportSchemas().has_key(import_ns):
-#                warnings.warn(\
-#                    'Detected multiple imports of the namespace "%s",'+
-#                    'may cause problems if they have different schemaLocations.' %import_ns
-#                    )
-#                raise RuntimeError, 'hi'
-#            
-#            self.addImportSchema(schema)
-#            self.imports[import_ns] = tp
-
 
     class Import(XMLSchemaComponent):
         """<import> 
@@ -1310,6 +1288,9 @@ class XMLSchema(XMLSchemaComponent):
             reader._imports = self._parent().getImportSchemas()
             reader._includes = self._parent().getIncludeSchemas()
             self._schema = schema
+
+            if not self.attributes.has_key('schemaLocation'):
+                raise SchemaError, 'no schemaLocation'
             reader.loadFromURL(self.attributes.get('schemaLocation'), schema)
 
 
