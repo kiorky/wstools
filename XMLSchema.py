@@ -15,7 +15,7 @@
 ident = "$Id$"
 
 import types, weakref, sys, warnings
-from Namespaces import XMLNS
+from Namespaces import SCHEMA, XMLNS
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
 
@@ -599,6 +599,8 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
                     %(namespace, collection, name)
         elif parent.imports.has_key(namespace):
             schema = parent.imports[namespace].getSchema()
+            if schema is None: 
+                raise SchemaError, 'no schema instance for imported namespace (%s).'
             try:
                 obj = getattr(schema, collection)[name]
             except KeyError, ex:
@@ -1013,9 +1015,6 @@ class XMLSchema(XMLSchemaComponent):
            schema -- schema instance
            _imported_schemas 
         """
-        print "XMLSchema(%s) ADD IMPORT SCHEMA: %s" \
-            %(self.targetNamespace, schema.targetNamespace)
-            
         if not isinstance(schema, XMLSchema):
             raise TypeError, 'expecting a Schema instance'
         if schema.targetNamespace != self.targetNamespace:
@@ -1167,11 +1166,28 @@ class XMLSchema(XMLSchemaComponent):
                     except SchemaError:
                         # Dependency declaration, hopefully implementation
                         # is aware of this namespace (eg. SOAP,WSDL,?)
-                        warnings.warn(\
-                            '<import namespace="%s" schemaLocation=?>, %s'\
-                            %(import_ns, 'failed to load schema instance')
-                        )
+                        #warnings.warn(\
+                        #    '<import namespace="%s" schemaLocation=?>, %s'\
+                        #    %(import_ns, 'failed to load schema instance')
+                        #)
                         del slocd[import_ns]
+                        class LazyEval(str):
+                            '''Lazy evaluation of import, replace entry in self.imports.'''
+                            def getSchema(namespace):
+                                schema = slocd.get(namespace)
+                                if schema is None:
+                                    parent = self._parent()
+                                    wstypes = parent
+                                    if isinstance(parent, WSDLToolsAdapter):
+                                        wstypes = parent.getImportSchemas()
+                                    schema = wstypes.get(namespace)
+                                if isinstance(schema, XMLSchema):
+                                    self.imports[namespace] = schema
+                                    return schema
+
+                                return None
+
+                        self.imports[import_ns] = LazyEval(import_ns)
                         continue
                 else:           
                     tp._schema = schema
@@ -1822,17 +1838,42 @@ class ElementDeclaration(XMLSchemaComponent,\
         self.constraints = ()
 
     def isQualified(self):
-        """
-Global elements are always qualified.
+        """Global elements are always qualified.
         """
         return True
-
+    
+    def getAttribute(self, attribute):
+        """return attribute.
+        If attribute is type and it's None, and no simple or complex content, 
+        return the default type "xsd:anyType"
+        """
+        value = XMLSchemaComponent.getAttribute(self, attribute)
+        if attribute != 'type' or value is not None:
+            return value
+        
+        if self.content is not None:
+            return None
+        
+        parent = self
+        while 1:
+            nsdict = parent.attributes[XMLSchemaComponent.xmlns]
+            for k,v in nsdict.items():
+                if v not in SCHEMA.XSD_LIST: continue
+                return TypeDescriptionComponent((v, 'anyType'))
+            
+            if isinstance(parent, WSDLToolsAdapter)\
+                or not hasattr(parent, '_parent'):
+                break
+            
+            parent = parent._parent()
+            
+        raise SchemaError, 'failed to locate the XSD namespace'
+    
     def getElementDeclaration(self, attribute):
         raise Warning, 'invalid operation for <%s>' %self.tag
 
     def getTypeDefinition(self, attribute=None):
-        """
-If attribute is None, "type" is assumed, return the corresponding
+        """If attribute is None, "type" is assumed, return the corresponding
         representation of the global type definition (TypeDefinition),
         or the local definition if don't find "type".  To maintain backwards
         compat, if attribute is provided call base class method.
@@ -2012,6 +2053,11 @@ class ElementWildCard(LocalElementDeclaration, WildCardMarker):
         are not strict could have dynamically generated local elements.
         """
         return GetSchema(self).isElementFormDefaultQualified()
+
+    def getAttribute(self, attribute):
+        """return attribute.
+        """
+        return XMLSchemaComponent.getAttribute(self, attribute)
 
     def getTypeDefinition(self, attribute):
         raise Warning, 'invalid operation for <%s>' % self.tag
