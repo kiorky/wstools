@@ -87,7 +87,7 @@ class WSRF_V1_2:
 
         WSDL_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceLifetime-1.2-draft-01.wsdl"
         WSDL_DRAFT4 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceLifetime-1.2-draft-04.wsdl"
-        #LATEST = DRAFT4
+        LATEST = WSDL_DRAFT4
         WSDL_LIST = (WSDL_DRAFT1, WSDL_DRAFT4)
         XSD_LIST = (XSD_DRAFT1, XSD_DRAFT4)
 
@@ -97,7 +97,7 @@ class WSRF_V1_2:
 
         WSDL_DRAFT1 = "http://docs.oasis-open.org/wsrf/2004/06/wsrf-WS-ResourceProperties-1.2-draft-01.wsdl"
         WSDL_DRAFT5 = "http://docs.oasis-open.org/wsrf/2004/11/wsrf-WS-ResourceProperties-1.2-draft-05.wsdl"
-        #LATEST = DRAFT5
+        LATEST = WSDL_DRAFT5
         WSDL_LIST = (WSDL_DRAFT1, WSDL_DRAFT5)
         XSD_LIST = (XSD_DRAFT1, XSD_DRAFT5)
 
@@ -105,7 +105,7 @@ class WSRF_V1_2:
         XSD_DRAFT1 = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.xsd"
 
         WSDL_DRAFT1 = "http://docs.oasis-open.org/wsn/2004/06/wsn-WS-BaseNotification-1.2-draft-01.wsdl"
-        #LATEST = DRAFT1
+        LATEST = WSDL_DRAFT1
         WSDL_LIST = (WSDL_DRAFT1,)
         XSD_LIST = (XSD_DRAFT1,)
 

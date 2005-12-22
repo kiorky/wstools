@@ -11,7 +11,7 @@ ident = "$Id$"
 
 import weakref
 from cStringIO import StringIO
-from Namespaces import OASIS, XMLNS, WSA, WSA_LIST, WSRF_V1_2
+from Namespaces import OASIS, XMLNS, WSA, WSA_LIST, WSRF_V1_2, WSRF
 from Utility import Collection, CollectionNS, DOM, ElementProxy, basejoin
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 
@@ -146,6 +146,9 @@ class WSDL:
         child.setAttributeNS(XMLNS.BASE, 'xmlns:xsd', 'http://www.w3.org/1999/XMLSchema')
         child.setAttributeNS(XMLNS.BASE, 'xmlns:soap', 'http://schemas.xmlsoap.org/wsdl/soap/')
         child.setAttributeNS(XMLNS.BASE, 'xmlns:tns', self.targetNamespace)
+        
+        if self.name:
+            child.setAttributeNS(None, 'name', self.name)
 
         # wsdl:import
         for item in self.imports: 
@@ -376,6 +379,18 @@ class Element:
     def addExtension(self, item):
         item.parent = weakref.ref(self)
         self.extensions.append(item)
+        
+    def getWSDL(self):
+        """Return the WSDL object that contains this information item."""
+        parent = self
+        while 1:
+            # skip any collections
+            if isinstance(parent, WSDL):
+                return parent
+            try: parent = parent.parent()
+            except: break
+            
+        return None
 
 
 class ImportElement(Element):
@@ -383,9 +398,9 @@ class ImportElement(Element):
         self.namespace = namespace
         self.location = location
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this Message Part."""
-        return self.parent().parent()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this Message Part."""
+#        return self.parent().parent()
 
     def toDom(self):
         wsdl = self.getWSDL()
@@ -469,9 +484,9 @@ class Message(Element):
                 type = wsdl.types[nsuri].types[name]
         return type
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this Message Part."""
-        return self.parent().parent()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this Message Part."""
+#        return self.parent().parent()
 
     def toDom(self):
         wsdl = self.getWSDL()
@@ -489,9 +504,9 @@ class MessagePart(Element):
         self.element = None
         self.type = None
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this Message Part."""
-        return self.parent().parent().parent().parent()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this Message Part."""
+#        return self.parent().parent().parent().parent()
 
     def getTypeDefinition(self):
         wsdl = self.getWSDL()
@@ -541,8 +556,8 @@ class PortType(Element):
         self.operations = Collection(self)
         self.resourceProperties = None
 
-    def getWSDL(self):
-        return self.parent().parent()
+#    def getWSDL(self):
+#        return self.parent().parent()
 
     def getTargetNamespace(self):
         return self.targetNamespace or self.getWSDL().targetNamespace
@@ -616,7 +631,8 @@ class PortType(Element):
         if self.resourceProperties:
             ns,name = self.resourceProperties
             prefix = epc.getPrefix(ns)
-            epc.setAttributeNS(WSRF.PROPERTIES.LATEST, 'ResourceProperties', '%s:%s'%(prefix,name))
+            epc.setAttributeNS(WSRF.PROPERTIES.LATEST, 'ResourceProperties', 
+                                '%s:%s'%(prefix,name))
 
         for op in self.operations:
             op.toDom(epc._getNode())
@@ -706,12 +722,18 @@ class MessageRole(Element):
         self.message = message
         self.type = type
         self.action = action
-
+        
     def getWSDL(self):
-        """Return the WSDL object that contains this MessageRole."""
-        if self.parent().getWSDL() == 'fault':
-            return self.parent().parent().getWSDL()
-        return self.parent().getWSDL()
+        """Return the WSDL object that contains this information item."""
+        parent = self
+        while 1:
+            # skip any collections
+            if isinstance(parent, WSDL):
+                return parent
+            try: parent = parent.parent()
+            except: break
+            
+        return None
 
     def getMessage(self):
         """Return the WSDL object that represents the attribute message 
@@ -725,10 +747,18 @@ class MessageRole(Element):
 
         ep = ElementProxy(None, node)
         epc = ep.createAppendElement(DOM.GetWSDLUri(wsdl.version), self.type)
-        epc.setAttributeNS(None, 'message', self.message)
+        if not isinstance(self.message, basestring) and len(self.message) == 2:
+            ns,name = self.message
+            prefix = epc.getPrefix(ns)
+            epc.setAttributeNS(None, 'message', '%s:%s' %(prefix,name))
+        else:
+            epc.setAttributeNS(None, 'message', self.message)
 
         if self.action:
             epc.setAttributeNS(WSA.ADDRESS, 'Action', self.action)
+            
+        if self.name:
+            epc.setAttributeNS(None, 'name', self.name)
         
 
 class Binding(Element):
@@ -737,9 +767,9 @@ class Binding(Element):
         self.operations = Collection(self)
         self.type = type
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this binding."""
-        return self.parent().parent()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this binding."""
+#        return self.parent().parent()
 
     def getPortType(self):
         """Return the PortType object associated with this binding."""
@@ -768,10 +798,12 @@ class Binding(Element):
 
             item = DOM.getElement(element, 'input', None, None)
             if item is not None:
+                #TODO: addInputBinding?
                 mbinding = MessageRoleBinding('input')
                 mbinding.documentation = GetDocumentation(item)
                 opbinding.input = mbinding
                 mbinding.load_ex(GetExtensions(item))
+                mbinding.parent = weakref.ref(opbinding)
 
             item = DOM.getElement(element, 'output', None, None)
             if item is not None:
@@ -779,6 +811,7 @@ class Binding(Element):
                 mbinding.documentation = GetDocumentation(item)
                 opbinding.output = mbinding
                 mbinding.load_ex(GetExtensions(item))
+                mbinding.parent = weakref.ref(opbinding)
 
             for item in DOM.getElements(element, 'fault', None):
                 name = DOM.getAttr(item, 'name')
@@ -786,6 +819,7 @@ class Binding(Element):
                 mbinding.documentation = GetDocumentation(item)
                 opbinding.faults[name] = mbinding
                 mbinding.load_ex(GetExtensions(item))
+                mbinding.parent = weakref.ref(opbinding)
 
     def load_ex(self, elements):
         for e in elements:
@@ -828,9 +862,9 @@ class OperationBinding(Element):
         self.output = None
         self.faults = Collection(self)
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this binding."""
-        return self.parent().parent().parent().parent()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this binding."""
+#        return self.parent().parent().parent().parent()
 
 
     def getBinding(self):
@@ -910,11 +944,11 @@ class MessageRoleBinding(Element):
         Element.__init__(self, name, documentation)
         self.type = type
 
-    def getWSDL(self):
-        """Return the WSDL object that contains this MessageRole."""
-        if self.type == 'fault':
-            return self.parent().parent().getWSDL()
-        return self.parent().getWSDL()
+#    def getWSDL(self):
+#        """Return the WSDL object that contains this MessageRole."""
+#        if self.type == 'fault':
+#            return self.parent().parent().getWSDL()
+#        return self.parent().getWSDL()
 
     def findBinding(self, kind):
         for item in self.extensions:
@@ -1059,8 +1093,8 @@ class Port(Element):
         Element.__init__(self, name, documentation)
         self.binding = binding
 
-    def getWSDL(self):
-        return self.parent().parent().getWSDL()
+#    def getWSDL(self):
+#        return self.parent().parent().getWSDL()
 
     def getService(self):
         """Return the Service object associated with this port."""
@@ -1202,6 +1236,20 @@ class SoapFaultBinding:
         self.namespace = namespace
         self.name = name
         self.use = use
+        
+    def getWSDL(self):
+        return self.parent().getWSDL()
+    
+    def toDom(self, node):
+        wsdl = self.getWSDL()
+        ep = ElementProxy(None, node)
+        epc = ep.createAppendElement(DOM.GetWSDLSoapBindingUri(wsdl.version), 'body')
+        epc.setAttributeNS(None, "use", self.use)
+        epc.setAttributeNS(None, "name", self.name)
+        if self.namespace is not None:
+            epc.setAttributeNS(None, "namespace", self.namespace)
+        if self.encodingStyle is not None:
+            epc.setAttributeNS(None, "encodingStyle", self.encodingStyle)
 
 
 class SoapHeaderBinding:
