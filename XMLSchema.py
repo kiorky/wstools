@@ -739,9 +739,16 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
                 raise SchemaError,\
                     'class instance %s, missing required attribute %s'\
                     %(self.__class__, a)
-        for a in self.attributes.keys():
-            if (a not in (XMLSchemaComponent.xmlns, XMLNS.XML)) and\
-                (a not in self.__class__.attributes.keys()) and not\
+        for a,v in self.attributes.items():
+            # attribute #other, ie. not in empty namespace
+            if type(v) is dict:
+                continue
+            
+            # predefined prefixes xmlns, xml
+            if a in (XMLSchemaComponent.xmlns, XMLNS.XML):
+                continue
+            
+            if (a not in self.__class__.attributes.keys()) and not\
                 (self.isAttribute() and self.isReference()):
                 raise SchemaError, '%s, unknown attribute(%s,%s)' \
                     %(self.getItemTrace(), a, self.attributes[a])
@@ -1358,7 +1365,12 @@ class XMLSchema(XMLSchemaComponent):
                     reader = SchemaReader(base_url=schema.getBaseUrl())
                     reader._imports = schema.getImportSchemas()
                     reader._includes = schema.getIncludeSchemas()
-                    self._schema = reader.loadFromURL(url)
+                    
+                    # create schema before loading so chameleon include 
+                    # will evalute targetNamespace correctly.
+                    self._schema = XMLSchema(schema)
+                    reader.loadFromURL(url, self._schema)
+
             return self._schema
 
 

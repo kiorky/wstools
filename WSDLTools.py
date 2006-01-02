@@ -464,25 +464,25 @@ class Message(Element):
             if elemref is not None:
                 part.element = ParseTypeRef(elemref, element)
 
-    def getElementDeclaration(self):
-        """Return the XMLSchema.ElementDeclaration instance or None"""
-        element = None
-        if self.element:
-            nsuri,name = self.element
-            wsdl = self.getWSDL()
-            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].elements.has_key(name):
-                element = wsdl.types[nsuri].elements[name]
-        return element
-
-    def getTypeDefinition(self):
-        """Return the XMLSchema.TypeDefinition instance or None"""
-        type = None
-        if self.type:
-            nsuri,name = self.type
-            wsdl = self.getWSDL()
-            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].types.has_key(name):
-                type = wsdl.types[nsuri].types[name]
-        return type
+#    def getElementDeclaration(self):
+#        """Return the XMLSchema.ElementDeclaration instance or None"""
+#        element = None
+#        if self.element:
+#            nsuri,name = self.element
+#            wsdl = self.getWSDL()
+#            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].elements.has_key(name):
+#                element = wsdl.types[nsuri].elements[name]
+#        return element
+#
+#    def getTypeDefinition(self):
+#        """Return the XMLSchema.TypeDefinition instance or None"""
+#        type = None
+#        if self.type:
+#            nsuri,name = self.type
+#            wsdl = self.getWSDL()
+#            if wsdl.types.has_key(nsuri) and wsdl.types[nsuri].types.has_key(name):
+#                type = wsdl.types[nsuri].types[name]
+#        return type
 
 #    def getWSDL(self):
 #        """Return the WSDL object that contains this Message Part."""
