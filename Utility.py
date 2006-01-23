@@ -23,6 +23,17 @@ from TimeoutSocket import TimeoutSocket, TimeoutError
 from urlparse import urlparse
 from httplib import HTTPConnection, HTTPSConnection
 from exceptions import Exception
+try:
+    from ZSI import _get_idstr
+except:
+    def _get_idstr(pyobj):
+        '''Python 2.3.x generates a FutureWarning for negative IDs, so
+        we use a different prefix character to ensure uniqueness, and
+        call abs() to avoid the warning.'''
+        x = id(pyobj)
+        if x < 0:
+            return 'x%x' % abs(x)
+        return 'o%x' % x
 
 import xml.dom.minidom
 from xml.dom import Node
@@ -90,7 +101,7 @@ class DOMException(Exception):
 class Base:
     """Base class for instance level Logging"""
     def __init__(self, module=__name__):
-        self.logger = logging.getLogger('%s-%s(%x)' %(module, self.__class__, id(self)))
+        self.logger = logging.getLogger('%s-%s(%x)' %(module, self.__class__, get_idstr(self)))
 
 
 class HTTPResponse:
