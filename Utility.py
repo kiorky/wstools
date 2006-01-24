@@ -611,7 +611,7 @@ class DOM:
         """Return a true value if two namespace uri values match."""
         if value == wanted or (type(wanted) is tt) and value in wanted:
             return 1
-        if not strict:
+        if not strict and value is not None:
             wanted = type(wanted) is tt and wanted or (wanted,)
             value = value[-1:] != '/' and value or value[:-1]
             for item in wanted:
