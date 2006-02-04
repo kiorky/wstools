@@ -944,12 +944,6 @@ class MessageRoleBinding(Element):
         Element.__init__(self, name, documentation)
         self.type = type
 
-#    def getWSDL(self):
-#        """Return the WSDL object that contains this MessageRole."""
-#        if self.type == 'fault':
-#            return self.parent().parent().getWSDL()
-#        return self.parent().getWSDL()
-
     def findBinding(self, kind):
         for item in self.extensions:
             if isinstance(item, kind):
