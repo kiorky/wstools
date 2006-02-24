@@ -82,6 +82,9 @@ def setLevel(level=0):
     '''
     ILogger.level = level
 
+def getLevel():
+    return ILogger.level
+
 def getLogger(msg):
     '''Return instance of Logging class.
     '''
