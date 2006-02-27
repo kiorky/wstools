@@ -575,7 +575,6 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
            collection -- collection in parent Schema instance to search.
         """
         obj = None
-        #tdc = self.attributes.get(attribute)
         tdc = self.getAttributeQName(attribute)
         if tdc:
             obj = self.getSchemaItem(collection, tdc.getTargetNamespace(), tdc.getName())
