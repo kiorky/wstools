@@ -1,43 +1,42 @@
 #! /usr/bin/env python
-"""Compatibility module, imported by ZSI if you don't have PyXML 0.7.
+'''XML Canonicalization
 
-No copyright violations -- we're only using parts of PyXML that we
-wrote.
-"""
+Patches Applied to xml.dom.ext.c14n:
+    http://sourceforge.net/projects/pyxml/
 
-_copyright = '''ZSI:  Zolera Soap Infrastructure.
+    [ 1444526 ] c14n.py: http://www.w3.org/TR/xml-exc-c14n/ fix
+        -- includes [ 829905 ] c14n.py fix for bug #825115, 
+           Date Submitted: 2003-10-24 23:43
+        -- include dependent namespace declarations declared in ancestor nodes 
+           (checking attributes and tags), 
+        -- handle InclusiveNamespaces PrefixList parameter
 
-Copyright 2001, Zolera Systems, Inc.  All Rights Reserved.
-Copyright 2002-2003, Rich Salz. All Rights Reserved.
+This module generates canonical XML of a document or element.
+    http://www.w3.org/TR/2001/REC-xml-c14n-20010315
+and includes a prototype of exclusive canonicalization
+    http://www.w3.org/Signature/Drafts/xml-exc-c14n
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, and/or
-sell copies of the Software, and to permit persons to whom the Software
-is furnished to do so, provided that the above copyright notice(s) and
-this permission notice appear in all copies of the Software and that
-both the above copyright notice(s) and this permission notice appear in
-supporting documentation.
+Requires PyXML 0.7.0 or later.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
-OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS
-INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT
-OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
-OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
-OR PERFORMANCE OF THIS SOFTWARE.
+Known issues if using Ft.Lib.pDomlette:
+    1. Unicode
+    2. does not white space normalize attributes of type NMTOKEN and ID?
+    3. seems to be include "\n" after importing external entities?
 
-Except as contained in this notice, the name of a copyright holder
-shall not be used in advertising or otherwise to promote the sale, use
-or other dealings in this Software without prior written authorization
-of the copyright holder.
+Note, this version processes a DOM tree, and consequently it processes
+namespace nodes as attributes, not from a node's namespace axis. This
+permits simple document and element canonicalization without
+XPath. When XPath is used, the XPath result node list is passed and used to
+determine if the node is in the XPath result list, but little else.
+
+Authors:
+    "Joseph M. Reagle Jr." <reagle@w3.org>
+    "Rich Salz" <rsalz@zolera.com>
+
+$Date$ by $Author$
 '''
 
-_copyright += "\n\nPortions are also: "
-_copyright += '''Copyright 2001, Zolera Systems Inc.  All Rights Reserved.
+_copyright = '''Copyright 2001, Zolera Systems Inc.  All Rights Reserved.
 Copyright 2001, MIT. All Rights Reserved.
 
 Distributed under the terms of:
@@ -48,184 +47,25 @@ or
   http://www.w3.org/Consortium/Legal/copyright-software-19980720
 '''
 
+import string
 from xml.dom import Node
-from Namespaces import XMLNS
-import cStringIO as StringIO
-try: 
-    from xml.dom.ext import c14n
-except ImportError, ex:
-    _implementation2 = None
-    _attrs = lambda E: (E.attributes and E.attributes.values()) or []
-    _children = lambda E: E.childNodes or []
-else:
-    class _implementation2(c14n._implementation):
-        """Patch for exclusive c14n 
-        """
-        def __init__(self, node, write, **kw):
-            self.unsuppressedPrefixes = kw.get('unsuppressedPrefixes')
-            self._exclusive = None
-            if node.nodeType == Node.ELEMENT_NODE:
-                if not c14n._inclusive(self):
-                    self._exclusive = self._inherit_context(node)
-            c14n._implementation.__init__(self, node, write, **kw)
+try:
+    from xml.ns import XMLNS
+except:
+    class XMLNS:
+        BASE = "http://www.w3.org/2000/xmlns/"
+        XML = "http://www.w3.org/XML/1998/namespace"
+try:
+    import cStringIO
+    StringIO = cStringIO
+except ImportError:
+    import StringIO
 
-        def _do_element(self, node, initial_other_attrs = []):
-            """Patch for the xml.dom.ext.c14n implemenation _do_element method.
-            This fixes a problem with sorting of namespaces.
-            """
-            # Get state (from the stack) make local copies.
-            #   ns_parent -- NS declarations in parent
-            #   ns_rendered -- NS nodes rendered by ancestors
-            #        ns_local -- NS declarations relevant to this element
-            #   xml_attrs -- Attributes in XML namespace from parent
-            #       xml_attrs_local -- Local attributes in XML namespace.
-            ns_parent, ns_rendered, xml_attrs = \
-                    self.state[0], self.state[1].copy(), self.state[2].copy() #0422
-            ns_local = ns_parent.copy()
-            xml_attrs_local = {}
+_attrs = lambda E: (E.attributes and E.attributes.values()) or []
+_children = lambda E: E.childNodes or []
+_IN_XML_NS = lambda n: n.name.startswith("xmlns")
+_inclusive = lambda n: n.unsuppressedPrefixes == None
 
-            # Divide attributes into NS, XML, and others.
-            #other_attrs = initial_other_attrs[:]
-            other_attrs = []
-            sort_these_attrs = initial_other_attrs[:]
-
-            in_subset = c14n._in_subset(self.subset, node)
-            #for a in _attrs(node):
-            sort_these_attrs +=c14n._attrs(node)
-            
-            for a in sort_these_attrs:
-                if a.namespaceURI == c14n.XMLNS.BASE:
-                    n = a.nodeName
-                    if n == "xmlns:": n = "xmlns"        # DOM bug workaround
-                    ns_local[n] = a.nodeValue
-                elif a.namespaceURI == c14n.XMLNS.XML:
-                    if c14n._inclusive(self) or (in_subset and  c14n._in_subset(self.subset, a)): #020925 Test to see if attribute node in subset
-                        xml_attrs_local[a.nodeName] = a #0426
-                else:
-                    if  c14n._in_subset(self.subset, a):     #020925 Test to see if attribute node in subset
-                        other_attrs.append(a)
-                #add local xml:foo attributes to ancestor's xml:foo attributes
-                xml_attrs.update(xml_attrs_local)
-
-            # Render the node
-            W, name = self.write, None
-            if in_subset: 
-                name = node.nodeName
-                W('<')
-                W(name)
-
-                # Create list of NS attributes to render.
-                ns_to_render = []
-                for n,v in ns_local.items():
-
-                    # If default namespace is XMLNS.BASE or empty,
-                    # and if an ancestor was the same
-                    if n == "xmlns" and v in [ c14n.XMLNS.BASE, '' ] \
-                    and ns_rendered.get('xmlns') in [ c14n.XMLNS.BASE, '', None ]:
-                        continue
-
-                    # "omit namespace node with local name xml, which defines
-                    # the xml prefix, if its string value is
-                    # http://www.w3.org/XML/1998/namespace."
-                    if n in ["xmlns:xml", "xml"] \
-                    and v in [ 'http://www.w3.org/XML/1998/namespace' ]:
-                        continue
-
-
-                    # If not previously rendered
-                    # and it's inclusive  or utilized
-                    if (n,v) not in ns_rendered.items() \
-                      and (c14n._inclusive(self) or \
-                      c14n._utilized(n, node, other_attrs, self.unsuppressedPrefixes)):
-                        ns_to_render.append((n, v))
-
-                #####################################
-                # JRB
-                #####################################
-                if not c14n._inclusive(self):
-                    if node.prefix is None:
-                        look_for = [('xmlns', node.namespaceURI),]
-                    else:
-                        look_for = [('xmlns:%s' %node.prefix, node.namespaceURI),]
-                    for a in c14n._attrs(node):
-                        if a.namespaceURI != XMLNS.BASE:
-                           #print "ATTRIBUTE: ", (a.namespaceURI, a.prefix)
-                           if a.prefix:
-                               #print "APREFIX: ", a.prefix
-                               look_for.append(('xmlns:%s' %a.prefix, a.namespaceURI))
-
-                    for key,namespaceURI in look_for:
-                        if ns_rendered.has_key(key):
-                            if ns_rendered[key] == namespaceURI:
-                                # Dont write out
-                                pass
-                            else:
-                                #ns_to_render += [(key, namespaceURI)]
-                                pass
-                        elif (key,namespaceURI) in ns_to_render:
-                            # Dont write out
-                            pass
-                        else:
-                            # Unique write out, rewrite to render
-                            ns_local[key] = namespaceURI
-                            for a in self._exclusive:
-                                if a.nodeName == key:
-                                    #self._do_attr(a.nodeName, a.value)
-                                    #ns_rendered[key] = namespaceURI
-                                    #break
-                                    ns_to_render += [(a.nodeName, a.value)]
-                                    break
-                                elif key is None and a.nodeName == 'xmlns':
-                                    #print "DEFAULT: ", (a.nodeName, a.value)
-                                    ns_to_render += [(a.nodeName, a.value)]
-                                    break
-                                #print "KEY: ", key
-                            else:
-                                #print "Look for: ", look_for
-                                #print "NS_TO_RENDER: ", ns_to_render
-                                #print "EXCLUSIVE NS: ", map(lambda f: (f.nodeName,f.value),self._exclusive)
-                                raise RuntimeError, \
-                                   'can not find namespace (%s="%s")  for exclusive canonicalization'\
-                                   %(key, namespaceURI)
-                #####################################
-
-
-
-                # Sort and render the ns, marking what was rendered.
-                ns_to_render.sort(c14n._sorter_ns)
-                for n,v in ns_to_render:
-                    #XXX JRB, getting 'xmlns,None' here when xmlns=''
-                    if v: self._do_attr(n, v)
-                    else:
-                        v = ''
-                        self._do_attr(n, v)
-                    ns_rendered[n]=v    #0417
-
-                # If exclusive or the parent is in the subset, add the local xml attributes
-                # Else, add all local and ancestor xml attributes
-                # Sort and render the attributes.
-                if not c14n._inclusive(self) or c14n._in_subset(self.subset,node.parentNode):  #0426
-                    other_attrs.extend(xml_attrs_local.values())
-                else:
-                    other_attrs.extend(xml_attrs.values())
-                #print "OTHER: ", other_attrs
-                other_attrs.sort(c14n._sorter)
-                for a in other_attrs:
-                    self._do_attr(a.nodeName, a.value)
-                W('>')
-
-
-            # Push state, recurse, pop state.
-            state, self.state = self.state, (ns_local, ns_rendered, xml_attrs)
-            for c in c14n._children(node):
-                c14n._implementation.handlers[c.nodeType](self, c)
-            self.state = state
-
-            if name: W('</%s>' % name)
-        c14n._implementation.handlers[c14n.Node.ELEMENT_NODE] = _do_element
-
-
-_IN_XML_NS = lambda n: n.namespaceURI == XMLNS.XML
 
 # Does a document/PI has lesser/greater document order than the
 # first element?
@@ -251,24 +91,53 @@ def _sorter_ns(n1,n2):
 def _utilized(n, node, other_attrs, unsuppressedPrefixes):
     '''_utilized(n, node, other_attrs, unsuppressedPrefixes) -> boolean
     Return true if that nodespace is utilized within the node'''
-
     if n.startswith('xmlns:'):
         n = n[6:]
     elif n.startswith('xmlns'):
         n = n[5:]
-    if n == node.prefix or n in unsuppressedPrefixes: return 1
+    if (n=="" and node.prefix in ["#default", None]) or \
+        n == node.prefix or n in unsuppressedPrefixes: 
+            return 1
     for attr in other_attrs:
         if n == attr.prefix: return 1
+    # For exclusive need to look at attributes
+    if unsuppressedPrefixes is not None:
+        for attr in _attrs(node):
+            if n == attr.prefix: return 1
     return 0
 
-_in_subset = lambda subset, node: not subset or node in subset
 
-#
-# JRB. Currently there is a bug in do_element, but since the underlying
-# Data Structures in c14n have changed I can't just apply the
-# _implementation2 patch above.  But this will work OK for most uses,
-# just not XML Signatures.
-#
+def _inclusiveNamespacePrefixes(node, context, unsuppressedPrefixes):
+    '''http://www.w3.org/TR/xml-exc-c14n/ 
+    InclusiveNamespaces PrefixList parameter, which lists namespace prefixes that 
+    are handled in the manner described by the Canonical XML Recommendation'''
+    inclusive = []
+    if node.prefix:
+        usedPrefixes = ['xmlns:%s' %node.prefix]
+    else:
+        usedPrefixes = ['xmlns']
+
+    for a in _attrs(node):
+        if a.nodeName.startswith('xmlns') or not a.prefix: continue
+        usedPrefixes.append('xmlns:%s' %a.prefix)
+
+    for attr in context:
+        n = attr.nodeName
+        if n in unsuppressedPrefixes:
+            inclusive.append(attr)
+        elif n.startswith('xmlns:') and n[6:] in unsuppressedPrefixes:
+            inclusive.append(attr)
+        elif n.startswith('xmlns') and n[5:] in unsuppressedPrefixes:
+            inclusive.append(attr)
+        elif attr.nodeName in usedPrefixes:
+            inclusive.append(attr)
+
+    return inclusive
+
+#_in_subset = lambda subset, node: not subset or node in subset
+_in_subset = lambda subset, node: subset is None or node in subset # rich's tweak
+
+
 class _implementation:
     '''Implementation class for C14N. This accompanies a node during it's
     processing and includes the parameters and processing state.'''
@@ -278,25 +147,23 @@ class _implementation:
 
     def __init__(self, node, write, **kw):
         '''Create and run the implementation.'''
-
         self.write = write
         self.subset = kw.get('subset')
-        if self.subset:
-            self.comments = kw.get('comments', 1)
-        else:
-            self.comments = kw.get('comments', 0)
+        self.comments = kw.get('comments', 0)
         self.unsuppressedPrefixes = kw.get('unsuppressedPrefixes')
         nsdict = kw.get('nsdict', { 'xml': XMLNS.XML, 'xmlns': XMLNS.BASE })
-
+        
         # Processing state.
-        self.state = (nsdict, ['xml'], [])
-
+        self.state = (nsdict, {'xml':''}, {}) #0422
+        
         if node.nodeType == Node.DOCUMENT_NODE:
             self._do_document(node)
         elif node.nodeType == Node.ELEMENT_NODE:
             self.documentOrder = _Element        # At document element
-            if self.unsuppressedPrefixes is not None:
-                self._do_element(node)
+            if not _inclusive(self):
+                inherited = _inclusiveNamespacePrefixes(node, self._inherit_context(node), 
+                                self.unsuppressedPrefixes)
+                self._do_element(node, inherited)
             else:
                 inherited = self._inherit_context(node)
                 self._do_element(node, inherited)
@@ -355,11 +222,10 @@ class _implementation:
         Process a text or CDATA node.  Render various special characters
         as their C14N entity representations.'''
         if not _in_subset(self.subset, node): return
-        s = node.data \
-                .replace("&", "&amp;") \
-                .replace("<", "&lt;") \
-                .replace(">", "&gt;") \
-                .replace("\015", "&#xD;")
+        s = string.replace(node.data, "&", "&amp;")
+        s = string.replace(s, "<", "&lt;")
+        s = string.replace(s, ">", "&gt;")
+        s = string.replace(s, "\015", "&#xD;")
         if s: self.write(s)
     handlers[Node.TEXT_NODE] = _do_text
     handlers[Node.CDATA_SECTION_NODE] = _do_text
@@ -410,46 +276,51 @@ class _implementation:
         W(' ')
         W(n)
         W('="')
-        s = value \
-            .replace("&", "&amp;") \
-            .replace("<", "&lt;") \
-            .replace('"', '&quot;') \
-            .replace('\011', '&#x9') \
-            .replace('\012', '&#xA') \
-            .replace('\015', '&#xD')
+        s = string.replace(value, "&", "&amp;")
+        s = string.replace(s, "<", "&lt;")
+        s = string.replace(s, '"', '&quot;')
+        s = string.replace(s, '\011', '&#x9')
+        s = string.replace(s, '\012', '&#xA')
+        s = string.replace(s, '\015', '&#xD')
         W(s)
         W('"')
+
 
     def _do_element(self, node, initial_other_attrs = []):
         '''_do_element(self, node, initial_other_attrs = []) -> None
         Process an element (and its children).'''
 
         # Get state (from the stack) make local copies.
-        #       ns_parent -- NS declarations in parent
-        #       ns_rendered -- NS nodes rendered by ancestors
-        #       xml_attrs -- Attributes in XML namespace from parent
-        #       ns_local -- NS declarations relevant to this element
+        #   ns_parent -- NS declarations in parent
+        #   ns_rendered -- NS nodes rendered by ancestors
+        #        ns_local -- NS declarations relevant to this element
+        #   xml_attrs -- Attributes in XML namespace from parent
+        #       xml_attrs_local -- Local attributes in XML namespace.
         ns_parent, ns_rendered, xml_attrs = \
-                self.state[0], self.state[1][:], self.state[2][:]
+                self.state[0], self.state[1].copy(), self.state[2].copy() #0422
         ns_local = ns_parent.copy()
+        xml_attrs_local = {}
 
         # Divide attributes into NS, XML, and others.
-        other_attrs = initial_other_attrs[:]
+        other_attrs = []
         in_subset = _in_subset(self.subset, node)
-        for a in _attrs(node):
+        for a in _attrs(node) + initial_other_attrs:
             if a.namespaceURI == XMLNS.BASE:
                 n = a.nodeName
                 if n == "xmlns:": n = "xmlns"        # DOM bug workaround
                 ns_local[n] = a.nodeValue
             elif a.namespaceURI == XMLNS.XML:
-                if self.unsuppressedPrefixes is None or in_subset:
-                    xml_attrs.append(a)
+                if _inclusive(self) or (in_subset and  _in_subset(self.subset, a)): #020925 Test to see if attribute node in subset
+                    xml_attrs_local[a.nodeName] = a #0426
             else:
-                other_attrs.append(a)
+                if  _in_subset(self.subset, a):     #020925 Test to see if attribute node in subset
+                    other_attrs.append(a)
+            #add local xml:foo attributes to ancestor's xml:foo attributes
+            xml_attrs.update(xml_attrs_local)
 
         # Render the node
         W, name = self.write, None
-        if in_subset:
+        if in_subset: 
             name = node.nodeName
             W('<')
             W(name)
@@ -457,25 +328,25 @@ class _implementation:
             # Create list of NS attributes to render.
             ns_to_render = []
             for n,v in ns_local.items():
-                pval = ns_parent.get(n)
 
-                # If default namespace is XMLNS.BASE or empty, skip
-                if n == "xmlns" \
-                and v in [ XMLNS.BASE, '' ] and pval in [ XMLNS.BASE, '' ]:
+                # If default namespace is XMLNS.BASE or empty,
+                # and if an ancestor was the same
+                if n == "xmlns" and v in [ XMLNS.BASE, '' ] \
+                and ns_rendered.get('xmlns') in [ XMLNS.BASE, '', None ]:
                     continue
 
                 # "omit namespace node with local name xml, which defines
                 # the xml prefix, if its string value is
                 # http://www.w3.org/XML/1998/namespace."
-                if n == "xmlns:xml" \
+                if n in ["xmlns:xml", "xml"] \
                 and v in [ 'http://www.w3.org/XML/1998/namespace' ]:
                     continue
 
-                # If different from parent, or parent didn't render
-                # and if not exclusive, or this prefix is needed or
-                # not suppressed
-                if (v != pval or n not in ns_rendered) \
-                  and (self.unsuppressedPrefixes is None or \
+
+                # If not previously rendered
+                # and it's inclusive  or utilized
+                if (n,v) not in ns_rendered.items() \
+                  and (_inclusive(self) or \
                   _utilized(n, node, other_attrs, self.unsuppressedPrefixes)):
                     ns_to_render.append((n, v))
 
@@ -483,12 +354,15 @@ class _implementation:
             ns_to_render.sort(_sorter_ns)
             for n,v in ns_to_render:
                 self._do_attr(n, v)
-                ns_rendered.append(n)
+                ns_rendered[n]=v    #0417
 
-            # Add in the XML attributes (don't pass to children, since
-            # we're rendering them), sort, and render.
-            other_attrs.extend(xml_attrs)
-            xml_attrs = []
+            # If exclusive or the parent is in the subset, add the local xml attributes
+            # Else, add all local and ancestor xml attributes
+            # Sort and render the attributes.
+            if not _inclusive(self) or _in_subset(self.subset,node.parentNode):  #0426
+                other_attrs.extend(xml_attrs_local.values())
+            else:
+                other_attrs.extend(xml_attrs.values())
             other_attrs.sort(_sorter)
             for a in other_attrs:
                 self._do_attr(a.nodeName, a.value)
@@ -520,17 +394,8 @@ def Canonicalize(node, output=None, **kw):
                 prefixes that should be inherited.
     '''
     if output:
-        if _implementation2 is None:
-            _implementation(node, output.write, **kw)
-        else:
-            apply(_implementation2, (node, output.write), kw)
+        apply(_implementation, (node, output.write), kw)
     else:
         s = StringIO.StringIO()
-        if _implementation2 is None:
-            _implementation(node, s.write, **kw)
-        else:
-            apply(_implementation2, (node, s.write), kw)
+        apply(_implementation, (node, s.write), kw)
         return s.getvalue()
-
-
-if __name__ == '__main__': print _copyright
