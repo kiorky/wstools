@@ -125,16 +125,28 @@ class OASIS:
     '''
     WSSE    = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
     UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    
+    class X509TOKEN:
+        Base64Binary = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"
+        STRTransform = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0"
+        PKCS7 = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#PKCS7"
+        X509 = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509"
+        X509PKIPathv1 = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509PKIPathv1"
+        X509v3SubjectKeyIdentifier = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3SubjectKeyIdentifier"
+        
     LIFETIME = WSRF_V1_2.LIFETIME.XSD_DRAFT1
     PROPERTIES = WSRF_V1_2.PROPERTIES.XSD_DRAFT1
     BASENOTIFICATION = WSRF_V1_2.BASENOTIFICATION.XSD_DRAFT1
     BASEFAULTS = WSRF_V1_2.BASEFAULTS.XSD_DRAFT1
 
 
+class WSTRUST:
+    BASE = "http://schemas.xmlsoap.org/ws/2004/04/trust"
+    ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/trust/Issue"
 
 class WSSE:
     BASE    = "http://schemas.xmlsoap.org/ws/2002/04/secext"
-    TRUST   = "http://schemas.xmlsoap.org/ws/2004/04/trust"
+    TRUST   = WSTRUST.BASE
 
 
 class WSU:
@@ -162,6 +174,7 @@ class WSA200303:
     ANONYMOUS  = "%s/role/anonymous" %ADDRESS
     FAULT      = None
 
+
 WSA = WSA200408
 WSA_LIST = (WSA200408, WSA200403, WSA200303)
 
@@ -170,10 +183,12 @@ class WSP:
 
 class BEA:
     SECCONV = "http://schemas.xmlsoap.org/ws/2004/04/sc"
+    SCTOKEN = "http://schemas.xmlsoap.org/ws/2004/04/security/sc/sct"
 
 class GLOBUS:
     SECCONV = "http://wsrf.globus.org/core/2004/07/security/secconv"
     CORE    = "http://www.globus.org/namespaces/2004/06/core"
     SIG     = "http://www.globus.org/2002/04/xmlenc#gssapi-sign"
+    TOKEN   = "http://www.globus.org/ws/2004/09/security/sc#GSSAPI_GSI_TOKEN"
 
 ZSI_SCHEMA_URI = 'http://www.zolera.com/schemas/ZSI/'
