@@ -315,7 +315,7 @@ class _implementation:
         # Divide attributes into NS, XML, and others.
         other_attrs = []
         in_subset = _in_subset(self.subset, node)
-        for a in _attrs(node) + initial_other_attrs:
+        for a in initial_other_attrs + _attrs(node):
             if a.namespaceURI == XMLNS.BASE:
                 n = a.nodeName
                 if n == "xmlns:": n = "xmlns"        # DOM bug workaround
