@@ -599,7 +599,8 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         elif parent.imports.has_key(namespace):
             schema = parent.imports[namespace].getSchema()
             if schema is None: 
-                raise SchemaError, 'no schema instance for imported namespace (%s).'
+                raise SchemaError, 'no schema instance for imported namespace (%s).'\
+                    %(namespace)
             try:
                 obj = getattr(schema, collection)[name]
             except KeyError, ex:
