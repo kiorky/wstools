@@ -31,20 +31,18 @@ class ILogger:
     debugOn = lambda self: self.level >= DEBUG
     warnOn = lambda self: self.level >= WARN
     
-_LoggerClass = ILogger
-
 
 class BasicLogger(ILogger):
     def __init__(self, msg, out=sys.stdout):
         self.msg, self.out = msg, out
 
     def warning(self, msg, *args):
-        if self.level < 1: return
+        if self.warnOn() is False: return
         print >>self, BasicLogger.WARN, self.msg,
         print >>self, msg %args
     WARN = 'WARN'
     def debug(self, msg, *args):
-        if self.level < 2: return
+        if self.debugOn() is False: return
         print >>self, BasicLogger.DEBUG, self.msg,
         print >>self, msg %args
     DEBUG = 'DEBUG'
@@ -58,6 +56,7 @@ class BasicLogger(ILogger):
         '''
         for s in args: self.out.write(s)
 
+_LoggerClass = BasicLogger
 
 def setBasicLogger():
     '''Use Basic Logger. 
