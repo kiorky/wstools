@@ -33,23 +33,34 @@ class ILogger:
     
 
 class BasicLogger(ILogger):
+    last = ''
+    
     def __init__(self, msg, out=sys.stdout):
         self.msg, self.out = msg, out
 
     def warning(self, msg, *args):
         if self.warnOn() is False: return
-        print >>self, BasicLogger.WARN, self.msg,
+        if BasicLogger.last != self.msg:
+            BasicLogger.last = self.msg
+            print >>self, "---- ", self.msg, " ----"
+        print >>self, "    %s  " %BasicLogger.WARN,
         print >>self, msg %args
-    WARN = 'WARN'
+    WARN = '[WARN]'
     def debug(self, msg, *args):
         if self.debugOn() is False: return
-        print >>self, BasicLogger.DEBUG, self.msg,
+        if BasicLogger.last != self.msg:
+            BasicLogger.last = self.msg
+            print >>self, "---- ", self.msg, " ----"
+        print >>self, "    %s  " %BasicLogger.DEBUG,
         print >>self, msg %args
-    DEBUG = 'DEBUG'
+    DEBUG = '[DEBUG]'
     def error(self, msg, *args):
-        print >>self, BasicLogger.ERROR, self.msg,
+        if BasicLogger.last != self.msg:
+            BasicLogger.last = self.msg
+            print >>self, "---- ", self.msg, " ----"
+        print >>self, "    %s  " %BasicLogger.ERROR,
         print >>self, msg %args
-    ERROR = 'ERROR'
+    ERROR = '[ERROR]'
 
     def write(self, *args):
         '''Write convenience function; writes strings.
