@@ -588,24 +588,39 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
            name -- name of item.
            collection -- collection in parent Schema instance to search.
         """
-        obj = None
         parent = GetSchema(self)
         if parent.targetNamespace == namespace:
             try:
                 obj = getattr(parent, collection)[name]
             except KeyError, ex:
-                raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
+                raise KeyError, 'targetNamespace(%s) collection(%s) has no item(%s)'\
                     %(namespace, collection, name)
-        elif parent.imports.has_key(namespace):
-            schema = parent.imports[namespace].getSchema()
-            if schema is None: 
-                raise SchemaError, 'no schema instance for imported namespace (%s).'\
-                    %(namespace)
-            try:
-                obj = getattr(schema, collection)[name]
-            except KeyError, ex:
-                raise KeyError, "targetNamespace(%s) collection(%s) has no item(%s)"\
-                    %(namespace, collection, name)
+                    
+            return obj
+        
+        if not parent.imports.has_key(namespace):
+            return None
+        
+        # Lazy Eval
+        schema = parent.imports[namespace]
+        if not isinstance(schema, XMLSchema):
+            schema = schema.getSchema()    
+            if schema is not None:
+                parent.imports[namespace] = schema
+            
+        if schema is None:
+            raise SchemaError, 'no schema instance for imported namespace (%s).'\
+                %(namespace)
+                
+        if not isinstance(schema, XMLSchema):
+            raise TypeError, 'expecting XMLSchema instance not "%r"' %schema
+                
+        try:
+            obj = getattr(schema, collection)[name]
+        except KeyError, ex:
+            raise KeyError, 'targetNamespace(%s) collection(%s) has no item(%s)'\
+                %(namespace, collection, name)
+                    
         return obj
 
     def getXMLNS(self, prefix=None):
