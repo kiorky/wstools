@@ -14,7 +14,7 @@
 
 ident = "$Id$"
 
-import sys, types, httplib, smtplib, urllib, socket, weakref
+import sys, types, httplib, urllib, socket, weakref
 from os.path import isfile
 from string import join, strip, split
 from UserDict import UserDict
