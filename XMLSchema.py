@@ -78,7 +78,7 @@ class SchemaReader:
         """
         for schemaLocation, val in schema.includes.items(): 
             if self._includes.has_key(schemaLocation):
-                schema.addIncludeSchema(self._imports[schemaLocation])
+                schema.addIncludeSchema(schemaLocation, self._imports[schemaLocation])
 
     def addSchemaByLocation(self, location, schema):
         """provide reader with schema document for a location.
