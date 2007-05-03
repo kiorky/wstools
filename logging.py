@@ -69,6 +69,122 @@ class BasicLogger(ILogger):
 
 _LoggerClass = BasicLogger
 
+
+class GLRecord(dict):
+    """Grid Logging Best Practices Record, Distributed Logging Utilities
+
+    The following names are reserved:
+
+    event -- log event name
+        Below is EBNF for the event name part of a log message.
+            name	= <nodot> ( "." <name> )? 
+            nodot	= {RFC3896-chars except "."}
+
+        Suffixes:
+            start: Immediately before the first action in a task.
+            end: Immediately after the last action in a task (that succeeded).
+            error: an error condition that does not correspond to an end event.
+
+    date -- timestamp
+    level -- logging level (see levels below)
+    status -- integer status code
+    gid -- global grid identifier 
+    gid, cgid -- parent/child identifiers
+    prog -- program name
+
+
+    More info: http://www.cedps.net/wiki/index.php/LoggingBestPractices#Python
+
+    reserved -- list of reserved names, 
+    omitname -- list of reserved names, output only values
+    levels -- dict of levels and description
+    """
+    reserved = ('date', 'event', 'level', 'status', 'gid', 'prog')
+    omitname = ('date', 'event',)
+    levels = dict(FATAL='Component cannot continue, or system is unusable.',
+        ALERT='Action must be taken immediately.',
+        CRITICAL='Critical conditions (on the system).',
+        ERROR='Errors in the component; not errors from elsewhere.',
+        WARNING='Problems that are recovered from, usually.',
+        NOTICE='Normal but significant condition.',
+        INFO='Informational messages that would be useful to a deployer or administrator.',
+        DEBUG='Lower level information concerning program logic decisions, internal state, etc.',
+        TRACE='Finest granularity, similar to "stepping through" the component or system.',
+    )
+
+    def __init__(self, date=None, **kw):
+        kw['date'] = date or self.GLDate()
+        dict.__init__(self, kw)
+
+    def __str__(self):
+        """
+        """
+        from cStringIO import StringIO
+        s = StringIO(); n = " "
+        reserved = self.reserved; omitname = self.omitname; levels = self.levels
+
+        for k in ( list(filter(lambda i: self.has_key(i), reserved)) + 
+            list(filter(lambda i: i not in reserved, self.keys()))
+        ):
+            v = self[k]
+            if k in omitname: 
+                s.write( "%s " %self.format[type(v)](v) )
+                continue
+
+            if k == reserved[2] and v not in levels:
+                pass
+
+            s.write( "%s=%s " %(k, self.format[type(v)](v) ) )
+
+        s.write("\n")
+        return s.getvalue()
+
+    class GLDate(str):
+        """Grid logging Date Format
+        all timestamps should all be in the same time zone (UTC). 
+        Grid timestamp value format that is a highly readable variant of the ISO8601 time standard [1]:
+
+	YYYY-MM-DDTHH:MM:SS.SSSSSSZ 
+
+        """
+        def __new__(self, args=None):
+            """args -- datetime (year, month, day[, hour[, minute[, second[, microsecond[,tzinfo]]]]])
+            """
+            import datetime
+            args = args or datetime.datetime.utcnow()
+            l = (args.year, args.month, args.day, args.hour, args.minute, args.second, 
+                 args.microsecond, args.tzinfo or 'Z')
+
+            return str.__new__(self, "%04d-%02d-%02dT%02d:%02d:%02d.%06d%s" %l)
+
+    format = { int:str, float:lambda x: "%lf" % x, long:str, str:lambda x:x,
+        unicode:str, GLDate:str, }
+
+
+def sendGridLog(**kw):
+    """Send GLRecord, Distributed Logging Utilities
+    """
+    import os
+    from socket import socket, AF_INET, SOCK_DGRAM
+    if not bool(os.environ.get('GRIDLOG_ON', False)):
+        return
+
+    url = os.environ.get('GRIDLOG_DEST')
+    if url is None: 
+        return
+
+    try:
+        idx1 = url.find('://') + 3
+        idx2 = url.find('/', idx1)
+        if idx2 < idx1: idx2 = len(url)
+        netloc = url[idx1:idx2]
+        host,port = (netloc.split(':')+[80])[0:2]
+        socket(AF_INET, SOCK_DGRAM).sendto( str(GLRecord(**kw)), 
+            (host,int(port)),)
+    except Exception, ex:
+        print >>sys.stderr, "*** gridlog failed -- %s" %(str(kw))
+
+
 def setBasicLogger():
     '''Use Basic Logger. 
     '''
