@@ -18,11 +18,11 @@ class ILogger:
     level = 0
     def __init__(self, msg):
         return
-    def warning(self, *args):
+    def warning(self, *args, **kw):
         return
-    def debug(self, *args):
+    def debug(self, *args, **kw):
         return
-    def error(self, *args):
+    def error(self, *args, **kw):
         return
     def setLevel(cls, level):
         cls.level = level
@@ -38,27 +38,27 @@ class BasicLogger(ILogger):
     def __init__(self, msg, out=sys.stdout):
         self.msg, self.out = msg, out
 
-    def warning(self, msg, *args):
+    def warning(self, msg, *args, **kw):
         if self.warnOn() is False: return
         if BasicLogger.last != self.msg:
             BasicLogger.last = self.msg
             print >>self, "---- ", self.msg, " ----"
-        print >>self, "    %s  " %BasicLogger.WARN,
+        print >>self, "    %s  " %self.WARN,
         print >>self, msg %args
     WARN = '[WARN]'
-    def debug(self, msg, *args):
+    def debug(self, msg, *args, **kw):
         if self.debugOn() is False: return
         if BasicLogger.last != self.msg:
             BasicLogger.last = self.msg
             print >>self, "---- ", self.msg, " ----"
-        print >>self, "    %s  " %BasicLogger.DEBUG,
+        print >>self, "    %s  " %self.DEBUG,
         print >>self, msg %args
     DEBUG = '[DEBUG]'
-    def error(self, msg, *args):
+    def error(self, msg, *args, **kw):
         if BasicLogger.last != self.msg:
             BasicLogger.last = self.msg
             print >>self, "---- ", self.msg, " ----"
-        print >>self, "    %s  " %BasicLogger.ERROR,
+        print >>self, "    %s  " %self.ERROR,
         print >>self, msg %args
     ERROR = '[ERROR]'
 
@@ -66,9 +66,29 @@ class BasicLogger(ILogger):
         '''Write convenience function; writes strings.
         '''
         for s in args: self.out.write(s)
+        event = ''.join(*args)
+
 
 _LoggerClass = BasicLogger
 
+class GridLogger(ILogger):
+    def debug(self, msg, *args, **kw):
+        kw['component'] = self.msg
+        gridLog(event=msg %args, level='DEBUG', **kw)
+
+    def warning(self, msg, *args, **kw):
+        kw['component'] = self.msg
+        gridLog(event=msg %args, level='WARNING', **kw)
+
+    def error(self, msg, *args, **kw):
+        kw['component'] = self.msg
+        gridLog(event=msg %args, level='ERROR', **kw)
+
+
+# 
+# Registry of send functions for gridLog
+# 
+GLRegistry = {}
 
 class GLRecord(dict):
     """Grid Logging Best Practices Record, Distributed Logging Utilities
@@ -96,11 +116,11 @@ class GLRecord(dict):
     More info: http://www.cedps.net/wiki/index.php/LoggingBestPractices#Python
 
     reserved -- list of reserved names, 
-    omitname -- list of reserved names, output only values
+    omitname -- list of reserved names, output only values ('date', 'event',)
     levels -- dict of levels and description
     """
     reserved = ('date', 'event', 'level', 'status', 'gid', 'prog')
-    omitname = ('date', 'event',)
+    omitname = ()
     levels = dict(FATAL='Component cannot continue, or system is unusable.',
         ALERT='Action must be taken immediately.',
         CRITICAL='Critical conditions (on the system).',
@@ -161,28 +181,46 @@ class GLRecord(dict):
         unicode:str, GLDate:str, }
 
 
-def sendGridLog(**kw):
+def gridLog(**kw):
     """Send GLRecord, Distributed Logging Utilities
+    If the scheme is passed as a keyword parameter
+    the value is expected to be a callable function
+    that takes 2 parameters: url, outputStr
+
+    GRIDLOG_ON   -- turn grid logging on
+    GRIDLOG_DEST -- provide URL destination
     """
     import os
-    from socket import socket, AF_INET, SOCK_DGRAM
-    if not bool(os.environ.get('GRIDLOG_ON', False)):
+
+    if not bool( os.environ.get('GRIDLOG_ON', False) ):
         return
 
     url = os.environ.get('GRIDLOG_DEST')
     if url is None: 
         return
 
+    ## NOTE: urlparse problem w/customized schemes 
     try:
-        idx1 = url.find('://') + 3
-        idx2 = url.find('/', idx1)
-        if idx2 < idx1: idx2 = len(url)
-        netloc = url[idx1:idx2]
-        host,port = (netloc.split(':')+[80])[0:2]
-        socket(AF_INET, SOCK_DGRAM).sendto( str(GLRecord(**kw)), 
-            (host,int(port)),)
+        scheme = url[:url.find('://')]
+        send = GLRegistry[scheme]
+        send( url, str(GLRecord(**kw)), )
     except Exception, ex:
-        print >>sys.stderr, "*** gridlog failed -- %s" %(str(kw))
+        print >>sys.stderr, "*** gridLog failed -- %s" %(str(kw))
+
+
+def sendUDP(url, outputStr):
+    from socket import socket, AF_INET, SOCK_DGRAM
+    idx1 = url.find('://') + 3; idx2 = url.find('/', idx1)
+    if idx2 < idx1: idx2 = len(url)
+    netloc = url[idx1:idx2]
+    host,port = (netloc.split(':')+[80])[0:2]
+    socket(AF_INET, SOCK_DGRAM).sendto( outputStr, (host,int(port)), )
+
+def writeToFile(url, outputStr):
+    print >> open(url.split('://')[1], 'a+'), outputStr
+
+GLRegistry["gridlog-udp"] = sendUDP
+GLRegistry["file"] = writeToFile
 
 
 def setBasicLogger():
@@ -190,6 +228,11 @@ def setBasicLogger():
     '''
     setLoggerClass(BasicLogger)
     BasicLogger.setLevel(0)
+
+def setGridLogger():
+    '''Use GridLogger for all logging events.
+    '''
+    setLoggerClass(GridLogger)
 
 def setBasicLoggerWARN():
     '''Use Basic Logger.
@@ -202,6 +245,10 @@ def setBasicLoggerDEBUG():
     '''
     setLoggerClass(BasicLogger)
     BasicLogger.setLevel(DEBUG)
+
+def setLoggerClass(loggingClass):
+    '''Set Logging Class.
+    '''
 
 def setLoggerClass(loggingClass):
     '''Set Logging Class.
