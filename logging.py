@@ -105,7 +105,7 @@ class GLRecord(dict):
             end: Immediately after the last action in a task (that succeeded).
             error: an error condition that does not correspond to an end event.
 
-    date -- timestamp
+    ts -- timestamp
     level -- logging level (see levels below)
     status -- integer status code
     gid -- global grid identifier 
@@ -116,10 +116,10 @@ class GLRecord(dict):
     More info: http://www.cedps.net/wiki/index.php/LoggingBestPractices#Python
 
     reserved -- list of reserved names, 
-    omitname -- list of reserved names, output only values ('date', 'event',)
+    omitname -- list of reserved names, output only values ('ts', 'event',)
     levels -- dict of levels and description
     """
-    reserved = ('date', 'event', 'level', 'status', 'gid', 'prog')
+    reserved = ('ts', 'event', 'level', 'status', 'gid', 'prog')
     omitname = ()
     levels = dict(FATAL='Component cannot continue, or system is unusable.',
         ALERT='Action must be taken immediately.',
@@ -133,7 +133,7 @@ class GLRecord(dict):
     )
 
     def __init__(self, date=None, **kw):
-        kw['date'] = date or self.GLDate()
+        kw['ts'] = date or self.GLDate()
         dict.__init__(self, kw)
 
     def __str__(self):
