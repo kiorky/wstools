@@ -533,10 +533,10 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         parent = self
         targetNamespace = 'targetNamespace'
         tns = self.attributes.get(targetNamespace)
-        while not tns:
+        while not tns and parent and parent._parent is not None:
             parent = parent._parent()
             tns = parent.attributes.get(targetNamespace)
-        return tns
+        return tns or ''
 
     def getAttributeDeclaration(self, attribute):
         """attribute -- attribute with a QName value (eg. type).
