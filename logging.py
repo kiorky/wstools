@@ -5,7 +5,7 @@
 #
 """Logging"""
 ident = "$Id$"
-import sys
+import os, sys
 
 WARN = 1
 DEBUG = 2
@@ -134,6 +134,7 @@ class GLRecord(dict):
 
     def __init__(self, date=None, **kw):
         kw['ts'] = date or self.GLDate()
+        kw['gid'] = kw.get('gid') or os.getpid()
         dict.__init__(self, kw)
 
     def __str__(self):
