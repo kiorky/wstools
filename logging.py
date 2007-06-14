@@ -193,7 +193,7 @@ def gridLog(**kw):
     """
     import os
 
-    if not bool( os.environ.get('GRIDLOG_ON', False) ):
+    if not bool( int(os.environ.get('GRIDLOG_ON', 0)) ):
         return
 
     url = os.environ.get('GRIDLOG_DEST')
