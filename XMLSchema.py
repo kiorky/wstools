@@ -15,7 +15,7 @@
 ident = "$Id$"
 
 import types, weakref, sys, warnings
-from Namespaces import SCHEMA, XMLNS
+from Namespaces import SCHEMA, XMLNS, SOAP
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
 
@@ -37,7 +37,7 @@ ATTRIBUTE_GROUPS = 'attr_groups'
 ATTRIBUTES = 'attr_decl'
 ELEMENTS = 'elements'
 MODEL_GROUPS = 'model_groups'
-
+BUILT_IN_NAMESPACES = [SOAP.ENC,] + SCHEMA.XSD_LIST
 
 def GetSchema(component):
     """convience function for finding the parent XMLSchema instance.
@@ -574,16 +574,22 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
            attribute -- an information item attribute, with a QName value.
            collection -- collection in parent Schema instance to search.
         """
-        obj = None
         tdc = self.getAttributeQName(attribute)
-        if tdc:
-            obj = self.getSchemaItem(collection, tdc.getTargetNamespace(), tdc.getName())
+        if not tdc:
+            return
 
-        return obj
+        obj = self.getSchemaItem(collection, tdc.getTargetNamespace(), tdc.getName())
+        if obj: 
+            return obj
+
+#        raise SchemaError, 'No schema item "%s" in collection %s' %(tdc, collection)
+        return
 
     def getSchemaItem(self, collection, namespace, name):
         """returns object instance representing namespace, name,
-           or if does not exist return None.
+           or if does not exist return None if built-in, else
+           raise SchemaError.
+           
            namespace -- namespace item defined in.
            name -- name of item.
            collection -- collection in parent Schema instance to search.
@@ -599,8 +605,14 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
             return obj
         
         if not parent.imports.has_key(namespace):
-            return None
-        
+            if namespace in BUILT_IN_NAMESPACES:            
+                # built-in just return
+                # WARNING: expecting import if "redefine" or add to built-in namespace.
+                return
+            
+            raise SchemaError, 'schema "%s" does not import namespace "%s"' %(
+                parent.targetNamespace, namespace)
+            
         # Lazy Eval
         schema = parent.imports[namespace]
         if not isinstance(schema, XMLSchema):
@@ -609,6 +621,10 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
                 parent.imports[namespace] = schema
             
         if schema is None:
+            if namespace in BUILT_IN_NAMESPACES:
+                # built-in just return
+                return
+            
             raise SchemaError, 'no schema instance for imported namespace (%s).'\
                 %(namespace)
                 
