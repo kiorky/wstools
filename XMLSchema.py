@@ -158,6 +158,9 @@ class SchemaReader:
 class SchemaError(Exception): 
     pass
 
+class NoSchemaLocationWarning(Exception): 
+    pass
+
 
 ###########################
 # DOM Utility Adapters 
@@ -512,12 +515,15 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         item, path, name, ref = self, [], 'name', 'ref'
         while not isinstance(item,XMLSchema) and not isinstance(item,WSDLToolsAdapter):
             attr = item.getAttribute(name)
-            if attr is None:
+            if not attr:
                 attr = item.getAttribute(ref)
-                if attr is None: path.append('<%s>' %(item.tag))
-                else: path.append('<%s ref="%s">' %(item.tag, attr))
+                if not attr:
+                    path.append('<%s>' %(item.tag))
+                else: 
+                    path.append('<%s ref="%s">' %(item.tag, attr))
             else:
                 path.append('<%s name="%s">' %(item.tag,attr))
+
             item = item._parent()
         try:
             tns = item.getTargetNamespace()
@@ -661,10 +667,14 @@ class XMLSchemaComponent(XMLBase, MarkerInterface):
         """return requested attribute value or None
         """
         if type(attribute) in (list, tuple):
-             if len(attribute) != 2:
+            if len(attribute) != 2:
                 raise LookupError, 'To access attributes must use name or (namespace,name)'
 
-             return self.attributes.get(attribute[0]).get(attribute[1])
+            ns_dict = self.attributes.get(attribute[0])
+            if ns_dict is None:
+                return None
+
+            return ns_dict.get(attribute[1])
 
         return self.attributes.get(attribute)
 
@@ -1201,16 +1211,23 @@ class XMLSchema(XMLSchemaComponent):
                     slocd[import_ns] = schema
                     try:
                         tp.loadSchema(schema)
-                    except SchemaError:
+                    except NoSchemaLocationWarning, ex:
                         # Dependency declaration, hopefully implementation
                         # is aware of this namespace (eg. SOAP,WSDL,?)
+                        print "IMPORT: ", import_ns
+                        print ex
+                        del slocd[import_ns]
+                        continue
+                    except SchemaError, ex:
                         #warnings.warn(\
                         #    '<import namespace="%s" schemaLocation=?>, %s'\
                         #    %(import_ns, 'failed to load schema instance')
                         #)
+                        print ex
                         del slocd[import_ns]
-                        class LazyEval(str):
+                        class _LazyEvalImport(str):
                             '''Lazy evaluation of import, replace entry in self.imports.'''
+                            #attributes = dict(namespace=import_ns)
                             def getSchema(namespace):
                                 schema = slocd.get(namespace)
                                 if schema is None:
@@ -1225,7 +1242,7 @@ class XMLSchema(XMLSchemaComponent):
 
                                 return None
 
-                        self.imports[import_ns] = LazyEval(import_ns)
+                        self.imports[import_ns] = _LazyEvalImport(import_ns)
                         continue
                 else:           
                     tp._schema = schema
@@ -1344,7 +1361,8 @@ class XMLSchema(XMLSchemaComponent):
             self._schema = schema
 
             if not self.attributes.has_key('schemaLocation'):
-                raise SchemaError, 'no schemaLocation'
+                raise NoSchemaLocationWarning('no schemaLocation attribute in import')
+
             reader.loadFromURL(self.attributes.get('schemaLocation'), schema)
 
 
