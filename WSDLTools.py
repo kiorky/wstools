@@ -11,7 +11,7 @@ ident = "$Id$"
 
 import weakref
 from cStringIO import StringIO
-from Namespaces import OASIS, XMLNS, WSA, WSA_LIST, WSRF_V1_2, WSRF
+from Namespaces import OASIS, XMLNS, WSA, WSA_LIST, WSAW_LIST, WSRF_V1_2, WSRF
 from Utility import Collection, CollectionNS, DOM, ElementProxy, basejoin
 from XMLSchema import XMLSchema, SchemaReader, WSDLToolsAdapter
 
@@ -596,7 +596,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in WSA_LIST:
+                for WSA in WSA_LIST + WSAW_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.setInput(message, name, docs, action)
@@ -607,7 +607,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in WSA_LIST:
+                for WSA in WSA_LIST + WSAW_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.setOutput(message, name, docs, action)
@@ -617,7 +617,7 @@ class PortType(Element):
                 docs = GetDocumentation(item)
                 msgref = DOM.getAttr(item, 'message')
                 message = ParseQName(msgref, item)
-                for WSA in WSA_LIST:
+                for WSA in WSA_LIST + WSAW_LIST:
                     action = DOM.getAttr(item, 'Action', WSA.ADDRESS, None)
                     if action: break
                 operation.addFault(message, name, docs, action)
