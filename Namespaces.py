@@ -185,10 +185,9 @@ WSA_LIST = (WSA200508, WSA200408, WSA200403, WSA200303)
 
 class _WSAW(str):
     """ Define ADDRESS attribute to be compatible with WSA* layout """
-    ADDRESS = ""
+    ADDRESS = property(lambda s: s)
 
 WSAW200605 = _WSAW("http://www.w3.org/2006/05/addressing/wsdl")
-WSAW200605.ADDRESS = WSAW200605 # Compatibility hack
 
 WSAW_LIST = (WSAW200605,)
  
