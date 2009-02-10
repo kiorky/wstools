@@ -2471,7 +2471,8 @@ class ComplexType(XMLSchemaComponent,\
             self.annotation = Annotation(self)
             self.annotation.fromDom(contents[indx])
             indx += 1
-            component = SplitQName(contents[indx].getTagName())[1]
+            if indx < num:
+                component = SplitQName(contents[indx].getTagName())[1]
 
         self.content = None
         if component == 'simpleContent':
