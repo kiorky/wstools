@@ -24,7 +24,9 @@ except:
         XSD1        = "http://www.w3.org/1999/XMLSchema"
         XSD2        = "http://www.w3.org/2000/10/XMLSchema"
         XSD3        = "http://www.w3.org/2001/XMLSchema"
-        XSD_LIST    = [ XSD1, XSD2, XSD3 ]
+        #AXIS attachment implementation details
+        AXIS        = "http://xml.apache.org/xml-soap"
+        XSD_LIST    = [ XSD1, XSD2, XSD3, AXIS]
         XSI1        = "http://www.w3.org/1999/XMLSchema-instance"
         XSI2        = "http://www.w3.org/2000/10/XMLSchema-instance"
         XSI3        = "http://www.w3.org/2001/XMLSchema-instance"

@@ -976,6 +976,7 @@ class ElementProxy(Base, MessageInterface):
 
     def createAttributeNS(self, namespace, name, value):
         document = self._getOwnerDocument()
+        ##this function doesn't exist!! it has only two arguments
         attrNode = document.createAttributeNS(namespace, name, value)
 
     def setAttributeNS(self, namespaceURI, localName, value):
