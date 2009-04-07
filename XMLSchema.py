@@ -15,7 +15,7 @@
 ident = "$Id$"
 
 import types, weakref, sys, warnings
-from Namespaces import SCHEMA, XMLNS, SOAP
+from Namespaces import SCHEMA, XMLNS, SOAP, APACHE
 from Utility import DOM, DOMException, Collection, SplitQName, basejoin
 from StringIO import StringIO
 
@@ -37,7 +37,7 @@ ATTRIBUTE_GROUPS = 'attr_groups'
 ATTRIBUTES = 'attr_decl'
 ELEMENTS = 'elements'
 MODEL_GROUPS = 'model_groups'
-BUILT_IN_NAMESPACES = [SOAP.ENC,] + SCHEMA.XSD_LIST
+BUILT_IN_NAMESPACES = [SOAP.ENC,] + SCHEMA.XSD_LIST + [APACHE.AXIS_NS]
 
 def GetSchema(component):
     """convience function for finding the parent XMLSchema instance.

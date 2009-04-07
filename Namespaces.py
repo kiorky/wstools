@@ -24,9 +24,7 @@ except:
         XSD1        = "http://www.w3.org/1999/XMLSchema"
         XSD2        = "http://www.w3.org/2000/10/XMLSchema"
         XSD3        = "http://www.w3.org/2001/XMLSchema"
-        #AXIS attachment implementation details
-        AXIS        = "http://xml.apache.org/xml-soap"
-        XSD_LIST    = [ XSD1, XSD2, XSD3, AXIS]
+        XSD_LIST    = [ XSD1, XSD2, XSD3]
         XSI1        = "http://www.w3.org/1999/XMLSchema-instance"
         XSI2        = "http://www.w3.org/2000/10/XMLSchema-instance"
         XSI3        = "http://www.w3.org/2001/XMLSchema-instance"
@@ -140,6 +138,13 @@ class OASIS:
     PROPERTIES = WSRF_V1_2.PROPERTIES.XSD_DRAFT1
     BASENOTIFICATION = WSRF_V1_2.BASENOTIFICATION.XSD_DRAFT1
     BASEFAULTS = WSRF_V1_2.BASEFAULTS.XSD_DRAFT1
+
+
+class APACHE:
+    '''This name space is defined by AXIS and it is used for the TC in TCapache.py,
+    Map and file attachment (DataHandler)
+    '''
+    AXIS_NS = "http://xml.apache.org/xml-soap"
 
 
 class WSTRUST:
