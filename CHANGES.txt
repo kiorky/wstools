@@ -7,11 +7,6 @@ CHANGELOG
 - Nothing changed yet.
 
 
-0.3 (2011-02-21)
-----------------
-
-- Nothing changed yet.
-
 
 0.3 (2011-02-21)
 ----------------
