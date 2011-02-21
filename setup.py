@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 __version__ = '0.3'
 
 
-url="http://pywebsvcs.sf.net/"
+url="https://github.com/kiorky/wstools.git"
 
 
 def read(*rnames):

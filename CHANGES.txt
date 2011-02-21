@@ -1,10 +1,10 @@
 CHANGELOG
 ===========
 
-0.4 (unreleased)
+0.3 (2011-02-21)
 ----------------
 
-- Nothing changed yet.
+- fix url
 
 
 0.3 (2011-02-21)
