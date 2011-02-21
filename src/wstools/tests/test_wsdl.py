@@ -133,7 +133,6 @@ class WSDLToolsTestCase(unittest.TestCase):
 
 def setUpOptions(section):
     cp = ConfigParser.ConfigParser()
-    import pdb;pdb.set_trace()  ## Breakpoint ##
     cp.read(cwd+'/config.txt')
     if not cp.sections():
         print 'fatal error:  configuration file config.txt not present'
