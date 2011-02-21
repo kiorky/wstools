@@ -7,9 +7,13 @@
 
 import sys, unittest
 import ConfigParser
-from ZSI.wstools.Utility import DOM
-from ZSI.wstools.WSDLTools import WSDLReader
-from ZSI.wstools.TimeoutSocket import TimeoutError
+import os
+from wstools.Utility import DOM
+from wstools.WSDLTools import WSDLReader
+from wstools.TimeoutSocket import TimeoutError
+
+from wstools import tests
+cwd = os.path.dirname(tests.__file__)
 
 class WSDLToolsTestCase(unittest.TestCase):
 
@@ -129,7 +133,8 @@ class WSDLToolsTestCase(unittest.TestCase):
 
 def setUpOptions(section):
     cp = ConfigParser.ConfigParser()
-    cp.read('config.txt')
+    import pdb;pdb.set_trace()  ## Breakpoint ##
+    cp.read(cwd+'/config.txt')
     if not cp.sections():
         print 'fatal error:  configuration file config.txt not present'
         sys.exit(0)
