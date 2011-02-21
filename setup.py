@@ -2,13 +2,24 @@
 #
 # $Id: setup.py,v 1.11 2005/02/15 16:32:22 warnes Exp $
 
+import os,re
 from setuptools import setup, find_packages
 
 __version__ = '0.1'
 
+
 url="http://pywebsvcs.sf.net/"
 
-long_description="""WSDL parsing services package for Web Services for Python. see """ + url
+
+def read(*rnames):
+    return "\n"+ open(
+        os.path.join('.', *rnames)
+    ).read()
+
+long_description="""WSDL parsing services package for Web Services for Python. see """ + url \
+    + read('README.txt')\
+    + read('CHANGES.txt')\
+
 
 setup(
     name="wstools",

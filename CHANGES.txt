@@ -1,4 +1,11 @@
-0.1
-------
+CHANGELOG
+===========
+
+0.2 - (unreleased)
+----------------------
+        - proper release
+
+0.1 - (unreleased)
+----------------------
 
         - make wstools as an egg
