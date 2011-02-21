@@ -5,7 +5,7 @@
 import os,re
 from setuptools import setup, find_packages
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 
 url="http://pywebsvcs.sf.net/"
